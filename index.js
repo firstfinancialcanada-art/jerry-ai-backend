@@ -165,13 +165,328 @@ app.get('/', (req, res) => {
     endpoints: {
       startSms: '/api/start-sms',
       webhook: '/api/sms-webhook',
-      dashboard: '/api/dashboard'
+      dashboard: '/dashboard',
+      apiDashboard: '/api/dashboard',
+      conversations: '/api/conversations',
+      conversation: '/api/conversation/:phone'
     },
     timestamp: new Date()
   });
 });
 
-// Dashboard - View all data
+// Interactive HTML Dashboard
+app.get('/dashboard', async (req, res) => {
+  res.send(`
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Jerry AI Dashboard</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { 
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      padding: 20px;
+    }
+    .container { max-width: 1400px; margin: 0 auto; }
+    h1 { color: white; margin-bottom: 30px; font-size: 2.5rem; text-align: center; }
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 20px;
+      margin-bottom: 30px;
+    }
+    .stat-card {
+      background: white;
+      padding: 25px;
+      border-radius: 12px;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+      text-align: center;
+    }
+    .stat-card h3 { color: #667eea; font-size: 0.9rem; margin-bottom: 10px; text-transform: uppercase; }
+    .stat-card .number { font-size: 2.5rem; font-weight: bold; color: #333; }
+    
+    .section {
+      background: white;
+      padding: 30px;
+      border-radius: 12px;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+      margin-bottom: 30px;
+    }
+    .section h2 { 
+      color: #333; 
+      margin-bottom: 20px; 
+      border-bottom: 2px solid #667eea; 
+      padding-bottom: 10px; 
+      font-size: 1.5rem;
+    }
+    
+    .conversation-list { display: flex; flex-direction: column; gap: 15px; }
+    .conversation-item {
+      padding: 20px;
+      border: 2px solid #e0e0e0;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+    .conversation-item:hover {
+      border-color: #667eea;
+      background: #f8f9ff;
+      transform: translateX(5px);
+    }
+    .conversation-item .phone { font-weight: bold; font-size: 1.1rem; color: #333; }
+    .conversation-item .name { color: #667eea; font-size: 0.9rem; margin-left: 10px; }
+    .conversation-item .info { color: #666; font-size: 0.85rem; margin-top: 8px; }
+    .conversation-item .badge {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 0.75rem;
+      margin-left: 10px;
+      font-weight: 600;
+    }
+    .badge-active { background: #4ade80; color: white; }
+    .badge-converted { background: #667eea; color: white; }
+    .badge-stopped { background: #ef4444; color: white; }
+    
+    .messages-container {
+      display: none;
+      margin-top: 20px;
+      padding: 20px;
+      background: #f8f9ff;
+      border-radius: 8px;
+      border: 2px solid #667eea;
+    }
+    .messages-title {
+      font-weight: bold;
+      color: #667eea;
+      margin-bottom: 15px;
+      font-size: 1.1rem;
+    }
+    .message {
+      padding: 15px;
+      margin-bottom: 10px;
+      border-radius: 8px;
+      max-width: 80%;
+    }
+    .message.user {
+      background: #e0e7ff;
+      margin-left: auto;
+      text-align: right;
+    }
+    .message.assistant {
+      background: #fff;
+      border: 1px solid #e0e0e0;
+    }
+    .message .role { 
+      font-weight: bold; 
+      font-size: 0.8rem; 
+      margin-bottom: 5px;
+      text-transform: uppercase;
+    }
+    .message.user .role { color: #667eea; }
+    .message.assistant .role { color: #764ba2; }
+    .message .content { color: #333; line-height: 1.5; white-space: pre-wrap; }
+    .message .time { font-size: 0.75rem; color: #666; margin-top: 5px; }
+    
+    .appointment-card {
+      padding: 15px;
+      background: #f0fdf4;
+      border-left: 4px solid #4ade80;
+      border-radius: 4px;
+      margin-bottom: 15px;
+    }
+    .callback-card {
+      padding: 15px;
+      background: #fef3c7;
+      border-left: 4px solid #fbbf24;
+      border-radius: 4px;
+      margin-bottom: 15px;
+    }
+    .card-title { font-weight: bold; color: #333; margin-bottom: 8px; font-size: 1.1rem; }
+    .card-info { font-size: 0.9rem; color: #666; margin-top: 4px; }
+    
+    .loading { text-align: center; color: #666; padding: 40px; }
+    .empty-state { text-align: center; color: #999; padding: 40px; font-style: italic; }
+    
+    @media (max-width: 768px) {
+      h1 { font-size: 1.8rem; }
+      .stats { grid-template-columns: repeat(2, 1fr); }
+      .section { padding: 20px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🚗 Jerry AI Dashboard</h1>
+    
+    <div class="stats" id="stats">
+      <div class="stat-card">
+        <h3>Total Customers</h3>
+        <div class="number" id="totalCustomers">-</div>
+      </div>
+      <div class="stat-card">
+        <h3>Conversations</h3>
+        <div class="number" id="totalConversations">-</div>
+      </div>
+      <div class="stat-card">
+        <h3>Messages</h3>
+        <div class="number" id="totalMessages">-</div>
+      </div>
+      <div class="stat-card">
+        <h3>Appointments</h3>
+        <div class="number" id="totalAppointments">-</div>
+      </div>
+      <div class="stat-card">
+        <h3>Callbacks</h3>
+        <div class="number" id="totalCallbacks">-</div>
+      </div>
+    </div>
+    
+    <div class="section">
+      <h2>📱 Recent Conversations (Click to View Messages)</h2>
+      <div class="conversation-list" id="conversationList">
+        <div class="loading">Loading conversations...</div>
+      </div>
+    </div>
+    
+    <div class="section">
+      <h2>🚗 Recent Appointments</h2>
+      <div id="appointmentsList">
+        <div class="loading">Loading appointments...</div>
+      </div>
+    </div>
+    
+    <div class="section">
+      <h2>📞 Recent Callbacks</h2>
+      <div id="callbacksList">
+        <div class="loading">Loading callbacks...</div>
+      </div>
+    </div>
+  </div>
+  
+  <script>
+    async function loadDashboard() {
+      try {
+        // Load stats
+        const statsData = await fetch('/api/dashboard').then(r => r.json());
+        document.getElementById('totalCustomers').textContent = statsData.stats.totalCustomers;
+        document.getElementById('totalConversations').textContent = statsData.stats.totalConversations;
+        document.getElementById('totalMessages').textContent = statsData.stats.totalMessages;
+        document.getElementById('totalAppointments').textContent = statsData.stats.totalAppointments;
+        document.getElementById('totalCallbacks').textContent = statsData.stats.totalCallbacks;
+        
+        // Load conversations
+        const conversations = await fetch('/api/conversations').then(r => r.json());
+        const conversationList = document.getElementById('conversationList');
+        
+        if (conversations.length === 0) {
+          conversationList.innerHTML = '<div class="empty-state">No conversations yet. Send your first SMS to get started!</div>';
+        } else {
+          conversationList.innerHTML = conversations.map(conv => \`
+            <div class="conversation-item" onclick="viewConversation('\${conv.customer_phone}', this)">
+              <div>
+                <span class="phone">\${conv.customer_phone}</span>
+                <span class="name">\${conv.customer_name || 'Unknown'}</span>
+                <span class="badge badge-\${conv.status}">\${conv.status}</span>
+              </div>
+              <div class="info">
+                \${conv.vehicle_type || 'No vehicle selected'} • 
+                \${conv.budget || 'No budget set'} • 
+                Stage: \${conv.stage} • 
+                \${conv.message_count} messages
+              </div>
+              <div class="info">Started: \${new Date(conv.started_at).toLocaleString()}</div>
+              <div class="messages-container" id="messages-\${conv.customer_phone.replace(/[^0-9]/g, '')}"></div>
+            </div>
+          \`).join('');
+        }
+        
+        // Load appointments
+        const appointmentsList = document.getElementById('appointmentsList');
+        if (statsData.recentAppointments.length === 0) {
+          appointmentsList.innerHTML = '<div class="empty-state">No appointments yet.</div>';
+        } else {
+          appointmentsList.innerHTML = statsData.recentAppointments.map(apt => \`
+            <div class="appointment-card">
+              <div class="card-title">🚗 \${apt.customer_name} - \${apt.vehicle_type}</div>
+              <div class="card-info">📞 \${apt.customer_phone}</div>
+              <div class="card-info">💰 Budget: \${apt.budget}\${apt.budget_amount ? ' ($' + apt.budget_amount.toLocaleString() + ')' : ''}</div>
+              <div class="card-info">📅 Date: \${apt.datetime}</div>
+              <div class="card-info">✅ Booked: \${new Date(apt.created_at).toLocaleString()}</div>
+            </div>
+          \`).join('');
+        }
+        
+        // Load callbacks
+        const callbacksList = document.getElementById('callbacksList');
+        if (statsData.recentCallbacks.length === 0) {
+          callbacksList.innerHTML = '<div class="empty-state">No callback requests yet.</div>';
+        } else {
+          callbacksList.innerHTML = statsData.recentCallbacks.map(cb => \`
+            <div class="callback-card">
+              <div class="card-title">📞 \${cb.customer_name} - \${cb.vehicle_type}</div>
+              <div class="card-info">📞 \${cb.customer_phone}</div>
+              <div class="card-info">💰 Budget: \${cb.budget}\${cb.budget_amount ? ' ($' + cb.budget_amount.toLocaleString() + ')' : ''}</div>
+              <div class="card-info">⏰ Preferred Time: \${cb.datetime}</div>
+              <div class="card-info">✅ Requested: \${new Date(cb.created_at).toLocaleString()}</div>
+            </div>
+          \`).join('');
+        }
+      } catch (error) {
+        console.error('Error loading dashboard:', error);
+      }
+    }
+    
+    async function viewConversation(phone, element) {
+      const cleanPhone = phone.replace(/[^0-9]/g, '');
+      const messagesContainer = document.getElementById('messages-' + cleanPhone);
+      
+      if (messagesContainer.style.display === 'block') {
+        messagesContainer.style.display = 'none';
+        return;
+      }
+      
+      messagesContainer.innerHTML = '<div class="loading">Loading messages...</div>';
+      messagesContainer.style.display = 'block';
+      
+      try {
+        const data = await fetch('/api/conversation/' + encodeURIComponent(phone)).then(r => r.json());
+        
+        if (data.error) {
+          messagesContainer.innerHTML = '<div class="empty-state">Error loading messages</div>';
+          return;
+        }
+        
+        if (data.messages.length === 0) {
+          messagesContainer.innerHTML = '<div class="empty-state">No messages yet</div>';
+          return;
+        }
+        
+        messagesContainer.innerHTML = '<div class="messages-title">💬 Full Conversation Thread</div>' + 
+          data.messages.map(msg => \`
+            <div class="message \${msg.role}">
+              <div class="role">\${msg.role === 'user' ? '👤 Customer' : '🤖 Jerry AI'}</div>
+              <div class="content">\${msg.content}</div>
+              <div class="time">\${new Date(msg.created_at).toLocaleString()}</div>
+            </div>
+          \`).join('');
+      } catch (error) {
+        messagesContainer.innerHTML = '<div class="empty-state">Error loading messages</div>';
+      }
+    }
+    
+    loadDashboard();
+    setInterval(loadDashboard, 10000); // Refresh every 10 seconds
+  </script>
+</body>
+</html>
+  `);
+});
+
+// API: Dashboard stats
 app.get('/api/dashboard', async (req, res) => {
   const client = await pool.connect();
   try {
@@ -199,7 +514,36 @@ app.get('/api/dashboard', async (req, res) => {
   }
 });
 
-// Get conversation history
+// API: Get all conversations
+app.get('/api/conversations', async (req, res) => {
+  const client = await pool.connect();
+  try {
+    const result = await client.query(`
+      SELECT 
+        c.id,
+        c.customer_phone,
+        cu.name as customer_name,
+        c.stage,
+        c.status,
+        c.vehicle_type,
+        c.budget,
+        c.started_at,
+        c.updated_at,
+        (SELECT COUNT(*) FROM messages WHERE conversation_id = c.id) as message_count
+      FROM conversations c
+      LEFT JOIN customers cu ON c.customer_phone = cu.phone
+      ORDER BY c.updated_at DESC
+      LIMIT 50
+    `);
+    res.json(result.rows);
+  } catch (error) {
+    res.json({ error: error.message });
+  } finally {
+    client.release();
+  }
+});
+
+// API: Get conversation history
 app.get('/api/conversation/:phone', async (req, res) => {
   const client = await pool.connect();
   try {
