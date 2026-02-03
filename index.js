@@ -51,7 +51,7 @@ async function getOrCreateCustomer(phone) {
   }
 }
 
-// Get or create active conversation
+// Get or create active conversation - UPDATED TO ALWAYS UPDATE TIMESTAMP
 async function getOrCreateConversation(phone) {
   const client = await pool.connect();
   try {
@@ -68,6 +68,13 @@ async function getOrCreateConversation(phone) {
         [phone]
       );
       console.log('💬 New conversation started:', phone);
+    } else {
+      // Update the timestamp even if we found an existing one
+      await client.query(
+        'UPDATE conversations SET updated_at = CURRENT_TIMESTAMP WHERE id = $1',
+        [result.rows[0].id]
+      );
+      console.log('💬 Continuing conversation:', phone);
     }
     
     return result.rows[0];
@@ -96,6 +103,193 @@ async function updateConversation(conversationId, updates) {
       `UPDATE conversations SET ${fields.join(', ')}, updated_at = CURRENT_TIMESTAMP WHERE id = $${paramCount}`,
       values
     );
+  } finally {
+    client.release();
+  }
+}
+
+// Update conversation timestamp (NEW FUNCTION - keeps conversations fresh)
+async function touchConversation(conversationId) {
+  const client = await pool.connect();
+  try {
+    await client.query(
+      'UPDATE conversations SET updated_at = CURRENT_TIMESTAMP WHERE id = $1',
+      [conversationId]
+    );
+  } finally {
+    client.release();
+  }
+}
+
+// Check if customer already has an active conversation (NEW FUNCTION - prevents duplicates)
+async function hasActiveConversation(phone) {
+  const client = await pool.connect();
+  try {
+    const result = await client.query(
+      'SELECT id FROM conversations WHERE customer_phone = $1 AND status = $2 LIMIT 1',
+      [phone, 'active']
+    );
+    return result.rows.length > 0;
+  } finally {
+    client.release();
+  }
+}
+
+// Save message to database
+async function saveMessage(conversationId, phone, role, content) {
+  const client = await pool.connect();
+  try {
+    await client.query(
+      'INSERT INTO messages (conversation_id, customer_phone, role, content) VALUES ($1, $2, $3, $4)',
+      [conversationId, phone, role, content]
+    );
+  } finally {
+    client.release();
+  }
+}
+
+// Save appointment
+async function saveAppointment(data) {
+  const client = await pool.connect();
+  try {
+    await client.query(
+      'INSERT INTO appointments (customer_phone, customer_name, vehicle_type## ✅ **COMPLETE `index.js` - WITH ALL 3 FIXES**
+
+**Copy this ENTIRE code - everything stays the same + conversation fixes:**
+
+```javascript
+const express = require('express');
+const cors = require('cors');
+const fetch = require('node-fetch');
+const twilio = require('twilio');
+const { Pool } = require('pg');
+require('dotenv').config();
+
+const app = express();
+app.use(cors());
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+const PORT = process.env.PORT || 3000;
+const HOST = '0.0.0.0';
+
+// ===== DATABASE CONNECTION =====
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: {
+    rejectUnauthorized: false
+  }
+});
+
+// Test database connection on startup
+pool.connect()
+  .then(() => console.log('✅ Database connected'))
+  .catch(err => console.error('❌ Database connection error:', err));
+
+// ===== DATABASE HELPER FUNCTIONS =====
+
+// Get or create customer
+async function getOrCreateCustomer(phone) {
+  const client = await pool.connect();
+  try {
+    let result = await client.query(
+      'SELECT * FROM customers WHERE phone = $1',
+      [phone]
+    );
+    
+    if (result.rows.length === 0) {
+      result = await client.query(
+        'INSERT INTO customers (phone) VALUES ($1) RETURNING *',
+        [phone]
+      );
+      console.log('📝 New customer created:', phone);
+    }
+    
+    return result.rows;
+  } finally {
+    client.release();
+  }
+}
+
+// Get or create active conversation - FIXED TO UPDATE TIMESTAMP
+async function getOrCreateConversation(phone) {
+  const client = await pool.connect();
+  try {
+    // Check for active conversation
+    let result = await client.query(
+      'SELECT * FROM conversations WHERE customer_phone = $1 AND status = $2 ORDER BY started_at DESC LIMIT 1',
+      [phone, 'active']
+    );
+    
+    if (result.rows.length === 0) {
+      // Create new conversation
+      result = await client.query(
+        'INSERT INTO conversations (customer_phone) VALUES ($1) RETURNING *',
+        [phone]
+      );
+      console.log('💬 New conversation started:', phone);
+    } else {
+      // Update the timestamp even if we found an existing one
+      await client.query(
+        'UPDATE conversations SET updated_at = CURRENT_TIMESTAMP WHERE id = $1',
+        [result.rows.id]
+      );
+      console.log('💬 Continuing conversation:', phone);
+    }
+    
+    return result.rows;
+  } finally {
+    client.release();
+  }
+}
+
+// Update conversation data
+async function updateConversation(conversationId, updates) {
+  const client = await pool.connect();
+  try {
+    const fields = [];
+    const values = [];
+    let paramCount = 1;
+    
+    for (const [key, value] of Object.entries(updates)) {
+      fields.push(`${key} = $${paramCount}`);
+      values.push(value);
+      paramCount++;
+    }
+    
+    values.push(conversationId);
+    
+    await client.query(
+      `UPDATE conversations SET ${fields.join(', ')}, updated_at = CURRENT_TIMESTAMP WHERE id = $${paramCount}`,
+      values
+    );
+  } finally {
+    client.release();
+  }
+}
+
+// NEW: Update conversation timestamp (keeps it at top of list)
+async function touchConversation(conversationId) {
+  const client = await pool.connect();
+  try {
+    await client.query(
+      'UPDATE conversations SET updated_at = CURRENT_TIMESTAMP WHERE id = $1',
+      [conversationId]
+    );
+  } finally {
+    client.release();
+  }
+}
+
+// NEW: Check if customer already has an active conversation
+async function hasActiveConversation(phone) {
+  const client = await pool.connect();
+  try {
+    const result = await client.query(
+      'SELECT id FROM conversations WHERE customer_phone = $1 AND status = $2 LIMIT 1',
+      [phone, 'active']
+    );
+    return result.rows.length > 0;
   } finally {
     client.release();
   }
@@ -559,9 +753,9 @@ app.get('/dashboard', async (req, res) => {
                 <span class="badge badge-\${conv.status}">\${conv.status}</span>
               </div>
               <div class="info">
-                \${conv.vehicle_type || 'No vehicle selected'} • 
-                \${conv.budget || 'No budget set'} • 
-                Stage: \${conv.stage} • 
+                \${conv.vehicle_type || 'No vehicle selected'} -  
+                \${conv.budget || 'No budget set'} -  
+                Stage: \${conv.stage} -  
                 \${conv.message_count} messages
               </div>
               <div class="info">Started: \${new Date(conv.started_at).toLocaleString()}</div>
@@ -668,9 +862,9 @@ app.get('/api/dashboard', async (req, res) => {
     
     res.json({
       stats: {
-        totalCustomers: parseInt(customers.rows[0].count),
-        totalConversations: parseInt(conversations.rows[0].count),
-        totalMessages: parseInt(messages.rows[0].count),
+        totalCustomers: parseInt(customers.rows.count),
+        totalConversations: parseInt(conversations.rows.count),
+        totalMessages: parseInt(messages.rows.count),
         totalAppointments: appointments.rows.length,
         totalCallbacks: callbacks.rows.length
       },
@@ -730,11 +924,11 @@ app.get('/api/conversation/:phone', async (req, res) => {
     
     const messages = await client.query(
       'SELECT * FROM messages WHERE conversation_id = $1 ORDER BY created_at ASC',
-      [conversation.rows[0].id]
+      [conversation.rows.id]
     );
     
     res.json({
-      conversation: conversation.rows[0],
+      conversation: conversation.rows,
       messages: messages.rows
     });
   } catch (error) {
@@ -744,13 +938,23 @@ app.get('/api/conversation/:phone', async (req, res) => {
   }
 });
 
-// Start SMS campaign - FIXED TO USE CUSTOM MESSAGE
+// Start SMS campaign - FIXED TO PREVENT DUPLICATE MESSAGES
 app.post('/api/start-sms', async (req, res) => {
   try {
     const { phone, message } = req.body;
     
     if (!phone) {
       return res.json({ success: false, error: 'Phone number required' });
+    }
+    
+    // Check if customer already has an active conversation
+    const hasActive = await hasActiveConversation(phone);
+    
+    if (hasActive) {
+      return res.json({ 
+        success: false, 
+        error: 'This customer already has an active conversation. Check "Recent Conversations" below to continue their conversation.' 
+      });
     }
     
     // Default message if none provided
@@ -784,7 +988,7 @@ app.post('/api/start-sms', async (req, res) => {
   }
 });
 
-// Twilio Webhook - Receive SMS
+// Twilio Webhook - Receive SMS - FIXED TO ALWAYS UPDATE TIMESTAMP
 app.post('/api/sms-webhook', async (req, res) => {
   try {
     const { From: phone, Body: message } = req.body;
@@ -800,6 +1004,9 @@ app.post('/api/sms-webhook', async (req, res) => {
     
     // Save incoming message
     await saveMessage(conversation.id, phone, 'user', message);
+    
+    // Update conversation timestamp (keeps it at top of list)
+    await touchConversation(conversation.id);
     
     // Log analytics
     await logAnalytics('message_received', phone, { message });
@@ -893,7 +1100,7 @@ async function getJerryResponse(phone, message, conversation) {
     let budgetAmount = 0;
     
     if (numbers && numbers.length > 0) {
-      budgetAmount = parseInt(numbers[0]);
+      budgetAmount = parseInt(numbers);
       
       if (lowerMsg.includes('k') && budgetAmount < 1000) {
         budgetAmount = budgetAmount * 1000;
@@ -903,7 +1110,7 @@ async function getJerryResponse(phone, message, conversation) {
         const fullNumber = message.replace(/,/g, '');
         const extracted = fullNumber.match(/\d+/);
         if (extracted) {
-          budgetAmount = parseInt(extracted[0]);
+          budgetAmount = parseInt(extracted);
         }
       }
     }
@@ -974,11 +1181,11 @@ async function getJerryResponse(phone, message, conversation) {
     let name = message.trim();
     
     if (lowerMsg.includes('my name is')) {
-      name = message.split(/my name is/i)[1].trim();
+      name = message.split(/my name is/i).trim();[1]
     } else if (lowerMsg.includes("i'm")) {
-      name = message.split(/i'm/i)[1].trim();
+      name = message.split(/i'm/i).trim();[1]
     } else if (lowerMsg.includes("i am")) {
-      name = message.split(/i am/i)[1].trim();
+      name = message.split(/i am/i).trim();[1]
     }
     
     name = name.charAt(0).toUpperCase() + name.slice(1);
@@ -1035,7 +1242,7 @@ async function getJerryResponse(phone, message, conversation) {
   }
   
   // ===== DEFAULT FALLBACK =====
-  return "Thanks for your message! To help you better, let me know:\n• What type of vehicle? (SUV, Sedan, Truck)\n• Your budget? (e.g., $20k)\n• Test drive or callback?";
+  return "Thanks for your message! To help you better, let me know:\n-  What type of vehicle? (SUV, Sedan, Truck)\n-  Your budget? (e.g., $20k)\n-  Test drive or callback?";
 }
 
 app.listen(PORT, HOST, () => {
