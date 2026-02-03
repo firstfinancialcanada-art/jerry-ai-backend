@@ -522,6 +522,24 @@ app.get('/dashboard', async (req, res) => {
     
     .loading { text-align: center; color: #666; padding: 40px; }
     .empty-state { text-align: center; color: #999; padding: 40px; font-style: italic; }
+
+    .search-box {
+      margin-bottom: 20px;
+      padding: 12px;
+      width: 100%;
+      max-width: 500px;
+      border: 2px solid #e0e0e0;
+      border-radius: 8px;
+      font-size: 1rem;
+      font-family: inherit;
+    }
+    .search-box:focus {
+      outline: none;
+      border-color: #667eea;
+    }
+    .search-box::placeholder {
+      color: #999;
+    }
     
     @media (max-width: 768px) {
       h1 { font-size: 1.8rem; }
@@ -589,6 +607,13 @@ app.get('/dashboard', async (req, res) => {
     
     <div class="section">
       <h2>📱 Recent Conversations (Click to View Messages)</h2>
+      <input 
+        type="text" 
+        id="searchBox" 
+        class="search-box" 
+        placeholder="🔍 Search by phone number or name..."
+        onkeyup="filterConversations()"
+      >
       <div class="conversation-list" id="conversationList">
         <div class="loading">Loading conversations...</div>
       </div>
@@ -749,6 +774,29 @@ app.get('/dashboard', async (req, res) => {
       }
     }
     
+    
+    function filterConversations() {
+      const searchBox = document.getElementById('searchBox');
+      const searchTerm = searchBox.value.toLowerCase().replace(/[^0-9a-z]/g, '');
+      const conversationItems = document.querySelectorAll('.conversation-item');
+
+      conversationItems.forEach(item => {
+        const phoneElement = item.querySelector('.phone');
+        const nameElement = item.querySelector('.name');
+
+        if (phoneElement && nameElement) {
+          const phone = phoneElement.textContent.toLowerCase().replace(/[^0-9]/g, '');
+          const name = nameElement.textContent.toLowerCase().replace(/[^a-z]/g, '');
+
+          if (phone.includes(searchTerm) || name.includes(searchTerm)) {
+            item.style.display = '';
+          } else {
+            item.style.display = 'none';
+          }
+        }
+      });
+    }
+
     async function loadDashboard() {
       try {
         const statsData = await fetch('/api/dashboard').then(r => r.json());
@@ -1312,5 +1360,3 @@ async function getJerryResponse(phone, message, conversation) {
 app.listen(PORT, HOST, () => {
   console.log(`✅ Jerry AI Backend - Database Edition - Port ${PORT}`);
 });
-
-
