@@ -492,6 +492,7 @@ app.get('/dashboard', async (req, res) => {
       
       const phoneNumber = document.getElementById('phoneNumber').value.replace(/\\D/g, '');
       const fullPhone = phoneNumber.startsWith('1') ? '+' + phoneNumber : '+1' + phoneNumber;
+      const customMessage = document.getElementById('message').value;
       const sendBtn = document.getElementById('sendBtn');
       const resultDiv = document.getElementById('messageResult');
       
@@ -503,7 +504,10 @@ app.get('/dashboard', async (req, res) => {
         const response = await fetch('/api/start-sms', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ phone: fullPhone })
+          body: JSON.stringify({ 
+            phone: fullPhone,
+            message: customMessage
+          })
         });
         
         const data = await response.json();
@@ -740,14 +744,17 @@ app.get('/api/conversation/:phone', async (req, res) => {
   }
 });
 
-// Start SMS campaign
+// Start SMS campaign - FIXED TO USE CUSTOM MESSAGE
 app.post('/api/start-sms', async (req, res) => {
   try {
-    const { phone } = req.body;
+    const { phone, message } = req.body;
     
     if (!phone) {
       return res.json({ success: false, error: 'Phone number required' });
     }
+    
+    // Default message if none provided
+    const messageBody = message || "Hi! 👋 I'm Jerry from the dealership. I wanted to reach out and see if you're interested in finding your perfect vehicle. What type of car are you looking for? (Reply STOP to opt out)";
     
     // Ensure customer exists
     await getOrCreateCustomer(phone);
@@ -756,7 +763,7 @@ app.post('/api/start-sms', async (req, res) => {
     await getOrCreateConversation(phone);
     
     // Log analytics
-    await logAnalytics('sms_sent', phone, { source: 'manual_campaign' });
+    await logAnalytics('sms_sent', phone, { source: 'manual_campaign', message: messageBody });
     
     const accountSid = process.env.TWILIO_ACCOUNT_SID;
     const authToken = process.env.TWILIO_AUTH_TOKEN;
@@ -764,7 +771,7 @@ app.post('/api/start-sms', async (req, res) => {
     const client = twilio(accountSid, authToken);
     
     await client.messages.create({
-      body: "Hi! 👋 I'm Jerry from the dealership. I wanted to reach out and see if you're interested in finding your perfect vehicle. What type of car are you looking for? (Reply STOP to opt out)",
+      body: messageBody,
       from: fromNumber,
       to: phone
     });
