@@ -51,25 +51,22 @@ async function getOrCreateCustomer(phone) {
   }
 }
 
-// Get or create active conversation - UPDATED TO ALWAYS UPDATE TIMESTAMP
+// Get or create active conversation
 async function getOrCreateConversation(phone) {
   const client = await pool.connect();
   try {
-    // Check for active conversation
     let result = await client.query(
       'SELECT * FROM conversations WHERE customer_phone = $1 AND status = $2 ORDER BY started_at DESC LIMIT 1',
       [phone, 'active']
     );
     
     if (result.rows.length === 0) {
-      // Create new conversation
       result = await client.query(
         'INSERT INTO conversations (customer_phone) VALUES ($1) RETURNING *',
         [phone]
       );
       console.log('💬 New conversation started:', phone);
     } else {
-      // Update the timestamp even if we found an existing one
       await client.query(
         'UPDATE conversations SET updated_at = CURRENT_TIMESTAMP WHERE id = $1',
         [result.rows[0].id]
@@ -108,7 +105,7 @@ async function updateConversation(conversationId, updates) {
   }
 }
 
-// Update conversation timestamp (NEW FUNCTION - keeps conversations fresh)
+// Update conversation timestamp
 async function touchConversation(conversationId) {
   const client = await pool.connect();
   try {
@@ -121,167 +118,7 @@ async function touchConversation(conversationId) {
   }
 }
 
-// Check if customer already has an active conversation (NEW FUNCTION - prevents duplicates)
-async function hasActiveConversation(phone) {
-  const client = await pool.connect();
-  try {
-    const result = await client.query(
-      'SELECT id FROM conversations WHERE customer_phone = $1 AND status = $2 LIMIT 1',
-      [phone, 'active']
-    );
-    return result.rows.length > 0;
-  } finally {
-    client.release();
-  }
-}
-
-// Save message to database
-async function saveMessage(conversationId, phone, role, content) {
-  const client = await pool.connect();
-  try {
-    await client.query(
-      'INSERT INTO messages (conversation_id, customer_phone, role, content) VALUES ($1, $2, $3, $4)',
-      [conversationId, phone, role, content]
-    );
-  } finally {
-    client.release();
-  }
-}
-
-// Save appointment
-async function saveAppointment(data) {
-  const client = await pool.connect();
-  try {
-    await client.query(
-      'INSERT INTO appointments (customer_phone, customer_name, vehicle_type## ✅ **COMPLETE `index.js` - WITH ALL 3 FIXES**
-
-**Copy this ENTIRE code - everything stays the same + conversation fixes:**
-
-```javascript
-const express = require('express');
-const cors = require('cors');
-const fetch = require('node-fetch');
-const twilio = require('twilio');
-const { Pool } = require('pg');
-require('dotenv').config();
-
-const app = express();
-app.use(cors());
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-
-const PORT = process.env.PORT || 3000;
-const HOST = '0.0.0.0';
-
-// ===== DATABASE CONNECTION =====
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: {
-    rejectUnauthorized: false
-  }
-});
-
-// Test database connection on startup
-pool.connect()
-  .then(() => console.log('✅ Database connected'))
-  .catch(err => console.error('❌ Database connection error:', err));
-
-// ===== DATABASE HELPER FUNCTIONS =====
-
-// Get or create customer
-async function getOrCreateCustomer(phone) {
-  const client = await pool.connect();
-  try {
-    let result = await client.query(
-      'SELECT * FROM customers WHERE phone = $1',
-      [phone]
-    );
-    
-    if (result.rows.length === 0) {
-      result = await client.query(
-        'INSERT INTO customers (phone) VALUES ($1) RETURNING *',
-        [phone]
-      );
-      console.log('📝 New customer created:', phone);
-    }
-    
-    return result.rows;
-  } finally {
-    client.release();
-  }
-}
-
-// Get or create active conversation - FIXED TO UPDATE TIMESTAMP
-async function getOrCreateConversation(phone) {
-  const client = await pool.connect();
-  try {
-    // Check for active conversation
-    let result = await client.query(
-      'SELECT * FROM conversations WHERE customer_phone = $1 AND status = $2 ORDER BY started_at DESC LIMIT 1',
-      [phone, 'active']
-    );
-    
-    if (result.rows.length === 0) {
-      // Create new conversation
-      result = await client.query(
-        'INSERT INTO conversations (customer_phone) VALUES ($1) RETURNING *',
-        [phone]
-      );
-      console.log('💬 New conversation started:', phone);
-    } else {
-      // Update the timestamp even if we found an existing one
-      await client.query(
-        'UPDATE conversations SET updated_at = CURRENT_TIMESTAMP WHERE id = $1',
-        [result.rows.id]
-      );
-      console.log('💬 Continuing conversation:', phone);
-    }
-    
-    return result.rows;
-  } finally {
-    client.release();
-  }
-}
-
-// Update conversation data
-async function updateConversation(conversationId, updates) {
-  const client = await pool.connect();
-  try {
-    const fields = [];
-    const values = [];
-    let paramCount = 1;
-    
-    for (const [key, value] of Object.entries(updates)) {
-      fields.push(`${key} = $${paramCount}`);
-      values.push(value);
-      paramCount++;
-    }
-    
-    values.push(conversationId);
-    
-    await client.query(
-      `UPDATE conversations SET ${fields.join(', ')}, updated_at = CURRENT_TIMESTAMP WHERE id = $${paramCount}`,
-      values
-    );
-  } finally {
-    client.release();
-  }
-}
-
-// NEW: Update conversation timestamp (keeps it at top of list)
-async function touchConversation(conversationId) {
-  const client = await pool.connect();
-  try {
-    await client.query(
-      'UPDATE conversations SET updated_at = CURRENT_TIMESTAMP WHERE id = $1',
-      [conversationId]
-    );
-  } finally {
-    client.release();
-  }
-}
-
-// NEW: Check if customer already has an active conversation
+// Check if customer already has an active conversation
 async function hasActiveConversation(phone) {
   const client = await pool.connect();
   try {
@@ -368,7 +205,7 @@ app.get('/', (req, res) => {
   });
 });
 
-// Interactive HTML Dashboard with Launch Jerry
+// Interactive HTML Dashboard
 app.get('/dashboard', async (req, res) => {
   res.send(`
 <!DOCTYPE html>
@@ -417,7 +254,6 @@ app.get('/dashboard', async (req, res) => {
       font-size: 1.5rem;
     }
     
-    /* Launch Jerry Form */
     .launch-form {
       display: grid;
       gap: 15px;
@@ -480,7 +316,6 @@ app.get('/dashboard', async (req, res) => {
       border: 1px solid #f87171;
     }
     
-    /* Conversations */
     .conversation-list { display: flex; flex-direction: column; gap: 15px; }
     .conversation-item {
       padding: 20px;
@@ -653,16 +488,13 @@ app.get('/dashboard', async (req, res) => {
   </div>
   
   <script>
-    // Format phone number as user types
     document.getElementById('phoneNumber').addEventListener('input', function(e) {
       let value = e.target.value.replace(/\\D/g, '');
       
-      // Add +1 prefix if not present
       if (value.length > 0 && !value.startsWith('1')) {
         value = '1' + value;
       }
       
-      // Format: +1 (XXX) XXX-XXXX
       let formatted = '';
       if (value.length > 0) {
         formatted = '+' + value.substring(0, 1);
@@ -680,7 +512,6 @@ app.get('/dashboard', async (req, res) => {
       e.target.value = formatted;
     });
     
-    // Send SMS Function
     async function sendSMS(event) {
       event.preventDefault();
       
@@ -712,7 +543,6 @@ app.get('/dashboard', async (req, res) => {
           resultDiv.style.display = 'block';
           document.getElementById('phoneNumber').value = '';
           
-          // Refresh dashboard after 2 seconds
           setTimeout(loadDashboard, 2000);
         } else {
           throw new Error(data.error || 'Failed to send SMS');
@@ -727,10 +557,8 @@ app.get('/dashboard', async (req, res) => {
       }
     }
     
-    // Load Dashboard Data
     async function loadDashboard() {
       try {
-        // Load stats
         const statsData = await fetch('/api/dashboard').then(r => r.json());
         document.getElementById('totalCustomers').textContent = statsData.stats.totalCustomers;
         document.getElementById('totalConversations').textContent = statsData.stats.totalConversations;
@@ -738,7 +566,6 @@ app.get('/dashboard', async (req, res) => {
         document.getElementById('totalAppointments').textContent = statsData.stats.totalAppointments;
         document.getElementById('totalCallbacks').textContent = statsData.stats.totalCallbacks;
         
-        // Load conversations
         const conversations = await fetch('/api/conversations').then(r => r.json());
         const conversationList = document.getElementById('conversationList');
         
@@ -753,9 +580,9 @@ app.get('/dashboard', async (req, res) => {
                 <span class="badge badge-\${conv.status}">\${conv.status}</span>
               </div>
               <div class="info">
-                \${conv.vehicle_type || 'No vehicle selected'} -  
-                \${conv.budget || 'No budget set'} -  
-                Stage: \${conv.stage} -  
+                \${conv.vehicle_type || 'No vehicle selected'} • 
+                \${conv.budget || 'No budget set'} • 
+                Stage: \${conv.stage} • 
                 \${conv.message_count} messages
               </div>
               <div class="info">Started: \${new Date(conv.started_at).toLocaleString()}</div>
@@ -764,7 +591,6 @@ app.get('/dashboard', async (req, res) => {
           \`).join('');
         }
         
-        // Load appointments
         const appointmentsList = document.getElementById('appointmentsList');
         if (statsData.recentAppointments.length === 0) {
           appointmentsList.innerHTML = '<div class="empty-state">No appointments yet.</div>';
@@ -780,7 +606,6 @@ app.get('/dashboard', async (req, res) => {
           \`).join('');
         }
         
-        // Load callbacks
         const callbacksList = document.getElementById('callbacksList');
         if (statsData.recentCallbacks.length === 0) {
           callbacksList.innerHTML = '<div class="empty-state">No callback requests yet.</div>';
@@ -800,7 +625,6 @@ app.get('/dashboard', async (req, res) => {
       }
     }
     
-    // View Conversation Messages
     async function viewConversation(phone, element) {
       const cleanPhone = phone.replace(/[^0-9]/g, '');
       const messagesContainer = document.getElementById('messages-' + cleanPhone);
@@ -839,10 +663,7 @@ app.get('/dashboard', async (req, res) => {
       }
     }
     
-    // Load dashboard on page load
     loadDashboard();
-    
-    // Auto-refresh every 10 seconds
     setInterval(loadDashboard, 10000);
   </script>
 </body>
@@ -862,9 +683,9 @@ app.get('/api/dashboard', async (req, res) => {
     
     res.json({
       stats: {
-        totalCustomers: parseInt(customers.rows.count),
-        totalConversations: parseInt(conversations.rows.count),
-        totalMessages: parseInt(messages.rows.count),
+        totalCustomers: parseInt(customers.rows[0].count),
+        totalConversations: parseInt(conversations.rows[0].count),
+        totalMessages: parseInt(messages.rows[0].count),
         totalAppointments: appointments.rows.length,
         totalCallbacks: callbacks.rows.length
       },
@@ -924,11 +745,11 @@ app.get('/api/conversation/:phone', async (req, res) => {
     
     const messages = await client.query(
       'SELECT * FROM messages WHERE conversation_id = $1 ORDER BY created_at ASC',
-      [conversation.rows.id]
+      [conversation.rows[0].id]
     );
     
     res.json({
-      conversation: conversation.rows,
+      conversation: conversation.rows[0],
       messages: messages.rows
     });
   } catch (error) {
@@ -938,7 +759,7 @@ app.get('/api/conversation/:phone', async (req, res) => {
   }
 });
 
-// Start SMS campaign - FIXED TO PREVENT DUPLICATE MESSAGES
+// Start SMS campaign
 app.post('/api/start-sms', async (req, res) => {
   try {
     const { phone, message } = req.body;
@@ -947,7 +768,6 @@ app.post('/api/start-sms', async (req, res) => {
       return res.json({ success: false, error: 'Phone number required' });
     }
     
-    // Check if customer already has an active conversation
     const hasActive = await hasActiveConversation(phone);
     
     if (hasActive) {
@@ -957,16 +777,10 @@ app.post('/api/start-sms', async (req, res) => {
       });
     }
     
-    // Default message if none provided
     const messageBody = message || "Hi! 👋 I'm Jerry from the dealership. I wanted to reach out and see if you're interested in finding your perfect vehicle. What type of car are you looking for? (Reply STOP to opt out)";
     
-    // Ensure customer exists
     await getOrCreateCustomer(phone);
-    
-    // Create new conversation
     await getOrCreateConversation(phone);
-    
-    // Log analytics
     await logAnalytics('sms_sent', phone, { source: 'manual_campaign', message: messageBody });
     
     const accountSid = process.env.TWILIO_ACCOUNT_SID;
@@ -988,7 +802,7 @@ app.post('/api/start-sms', async (req, res) => {
   }
 });
 
-// Twilio Webhook - Receive SMS - FIXED TO ALWAYS UPDATE TIMESTAMP
+// Twilio Webhook
 app.post('/api/sms-webhook', async (req, res) => {
   try {
     const { From: phone, Body: message } = req.body;
@@ -996,28 +810,16 @@ app.post('/api/sms-webhook', async (req, res) => {
     console.log('📩 Received from:', phone);
     console.log('💬 Message:', message);
     
-    // Ensure customer exists
     await getOrCreateCustomer(phone);
-    
-    // Get or create conversation
     const conversation = await getOrCreateConversation(phone);
-    
-    // Save incoming message
     await saveMessage(conversation.id, phone, 'user', message);
-    
-    // Update conversation timestamp (keeps it at top of list)
     await touchConversation(conversation.id);
-    
-    // Log analytics
     await logAnalytics('message_received', phone, { message });
     
-    // Get AI response
     const aiResponse = await getJerryResponse(phone, message, conversation);
     
-    // Save outgoing message
     await saveMessage(conversation.id, phone, 'assistant', aiResponse);
     
-    // Send response via Twilio
     const twiml = new twilio.twiml.MessagingResponse();
     twiml.message(aiResponse);
     
@@ -1031,30 +833,26 @@ app.post('/api/sms-webhook', async (req, res) => {
   }
 });
 
-// ===== JERRY AI LOGIC =====
+// Jerry AI Logic
 async function getJerryResponse(phone, message, conversation) {
   const lowerMsg = message.toLowerCase();
   
-  // Handle STOP
   if (lowerMsg === 'stop') {
     await updateConversation(conversation.id, { status: 'stopped' });
     await logAnalytics('conversation_stopped', phone, {});
     return "You've been unsubscribed. Reply START to resume.";
   }
   
-  // Handle location/dealership questions (can be asked at any stage)
   if (lowerMsg.includes('location') || lowerMsg.includes('where') || lowerMsg.includes('address') || 
       lowerMsg.includes('dealership') || lowerMsg.includes('calgary') || lowerMsg.includes('alberta')) {
     return "We're located in Calgary, Alberta, and we deliver vehicles all across Canada! 🇨🇦 If you'd like specific dealership details or directions, I can have a manager call you back shortly. Just let me know!";
   }
   
-  // Handle requests for dealership details or more info
   if (lowerMsg.includes('detail') || lowerMsg.includes('more info') || lowerMsg.includes('tell me more') ||
       (lowerMsg.includes('manager') && lowerMsg.includes('call'))) {
     return "I'd be happy to have one of our managers reach out to you with all the details! What's the best time to call you? (e.g., Tomorrow at 2pm, This afternoon, Friday morning)";
   }
   
-  // ===== STAGE 1: VEHICLE TYPE =====
   if (conversation.stage === 'greeting' || !conversation.vehicle_type) {
     
     if (lowerMsg.includes('suv')) {
@@ -1094,13 +892,12 @@ async function getJerryResponse(phone, message, conversation) {
     return "What type of vehicle interests you? We have SUVs, Trucks, Sedans, Coupes, and more!";
   }
   
-  // ===== STAGE 2: BUDGET =====
   if (conversation.stage === 'budget' && !conversation.budget) {
     const numbers = message.match(/\d+/g);
     let budgetAmount = 0;
     
     if (numbers && numbers.length > 0) {
-      budgetAmount = parseInt(numbers);
+      budgetAmount = parseInt(numbers[0]);
       
       if (lowerMsg.includes('k') && budgetAmount < 1000) {
         budgetAmount = budgetAmount * 1000;
@@ -1110,7 +907,7 @@ async function getJerryResponse(phone, message, conversation) {
         const fullNumber = message.replace(/,/g, '');
         const extracted = fullNumber.match(/\d+/);
         if (extracted) {
-          budgetAmount = parseInt(extracted);
+          budgetAmount = parseInt(extracted[0]);
         }
       }
     }
@@ -1153,7 +950,6 @@ async function getJerryResponse(phone, message, conversation) {
     return "What's your budget? Just give me a number like $15k, $20k, $40k, etc.";
   }
   
-  // ===== STAGE 3: APPOINTMENT/CALLBACK =====
   if (conversation.stage === 'appointment' && !conversation.intent) {
     if (lowerMsg.includes('1') || lowerMsg.includes('test') || lowerMsg.includes('drive') || 
         lowerMsg.includes('appointment') || lowerMsg.includes('visit')) {
@@ -1176,16 +972,15 @@ async function getJerryResponse(phone, message, conversation) {
     return "Would you like to:\n1️⃣ Book a test drive\n2️⃣ Schedule a call back\nJust reply 1 or 2!";
   }
   
-  // ===== STAGE 4: GET NAME =====
   if (conversation.stage === 'name' && !conversation.customer_name) {
     let name = message.trim();
     
     if (lowerMsg.includes('my name is')) {
-      name = message.split(/my name is/i).trim();[1]
+      name = message.split(/my name is/i)[1].trim();
     } else if (lowerMsg.includes("i'm")) {
-      name = message.split(/i'm/i).trim();[1]
+      name = message.split(/i'm/i)[1].trim();
     } else if (lowerMsg.includes("i am")) {
-      name = message.split(/i am/i).trim();[1]
+      name = message.split(/i am/i)[1].trim();
     }
     
     name = name.charAt(0).toUpperCase() + name.slice(1);
@@ -1195,7 +990,6 @@ async function getJerryResponse(phone, message, conversation) {
       stage: 'datetime'
     });
     
-    // Update customer name
     await pool.query(
       'UPDATE customers SET name = $1, last_contact = CURRENT_TIMESTAMP WHERE phone = $2',
       [name, phone]
@@ -1208,7 +1002,6 @@ async function getJerryResponse(phone, message, conversation) {
     }
   }
   
-  // ===== STAGE 5: DATE/TIME & CONFIRMATION =====
   if (conversation.stage === 'datetime' && !conversation.datetime) {
     await updateConversation(conversation.id, { 
       datetime: message,
@@ -1236,13 +1029,11 @@ async function getJerryResponse(phone, message, conversation) {
     }
   }
   
-  // ===== ALREADY CONFIRMED =====
   if (conversation.stage === 'confirmed') {
     return `Thanks ${conversation.customer_name}! We're all set for ${conversation.datetime}. If you need anything or want to reschedule, just let me know! We're located in Calgary, AB and deliver across Canada.`;
   }
   
-  // ===== DEFAULT FALLBACK =====
-  return "Thanks for your message! To help you better, let me know:\n-  What type of vehicle? (SUV, Sedan, Truck)\n-  Your budget? (e.g., $20k)\n-  Test drive or callback?";
+  return "Thanks for your message! To help you better, let me know:\n• What type of vehicle? (SUV, Sedan, Truck)\n• Your budget? (e.g., $20k)\n• Test drive or callback?";
 }
 
 app.listen(PORT, HOST, () => {
