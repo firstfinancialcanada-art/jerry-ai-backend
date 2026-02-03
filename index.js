@@ -12,10 +12,9 @@ app.use(express.urlencoded({ extended: true }));
 const PORT = process.env.PORT || 3000;
 const HOST = '0.0.0.0';
 
-// Store active SMS conversations (in production, use database)
+// Store conversations (use database in production)
 const conversations = {};
 
-// Twilio client
 const twilioClient = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
 
 // Health check
@@ -27,21 +26,20 @@ app.get('/', (req, res) => {
   });
 });
 
-// Start SMS conversation (from HTML button)
+// Start SMS conversation
 app.post('/api/start-sms', async (req, res) => {
   try {
-    const { phone } = req.body;
+    const { phone, message } = req.body;
     
-    // Initialize conversation
     conversations[phone] = {
       messages: [],
       started: new Date(),
       status: 'active',
+      stage: 'greeting',
       data: {}
     };
     
-    // Send first message
-    const initialMessage = "Hi! 👋 I'm Jerry from the dealership. I wanted to reach out and see if you're interested in finding your perfect vehicle. What type of car are you looking for? (Reply STOP to opt out)";
+    const initialMessage = message || "Hi! 👋 I'm Jerry from the dealership. I wanted to reach out and see if you're interested in finding your perfect vehicle. What type of car are you looking for? (Reply STOP to opt out)";
     
     await twilioClient.messages.create({
       from: process.env.TWILIO_PHONE_NUMBER,
@@ -64,25 +62,25 @@ app.post('/api/sms-webhook', async (req, res) => {
     const customerPhone = From;
     const customerMessage = Body.trim();
     
-    console.log('Incoming SMS from:', customerPhone, '- Message:', customerMessage);
+    console.log('📱 SMS from:', customerPhone, '- Message:', customerMessage);
     
-    // Initialize conversation if doesn't exist
+    // Initialize if doesn't exist
     if (!conversations[customerPhone]) {
       conversations[customerPhone] = {
         messages: [],
         started: new Date(),
         status: 'active',
+        stage: 'greeting',
         data: {}
       };
     }
     
-    // Add customer message
     conversations[customerPhone].messages.push({ role: 'user', content: customerMessage });
     
-    // Get AI response from Perplexity
+    // Get intelligent response
     const aiResponse = await getJerryResponse(customerPhone, customerMessage);
     
-    // Send response via Twilio
+    // Send via Twilio
     const twiml = new twilio.twiml.MessagingResponse();
     twiml.message(aiResponse);
     
@@ -90,81 +88,103 @@ app.post('/api/sms-webhook', async (req, res) => {
     
     res.type('text/xml').send(twiml.toString());
   } catch (error) {
-    console.error('Webhook error:', error);
+    console.error('❌ Webhook error:', error);
     const twiml = new twilio.twiml.MessagingResponse();
     twiml.message("I'm having trouble right now. Please call us at (403) 555-0100!");
     res.type('text/xml').send(twiml.toString());
   }
 });
 
-// Generate Jerry's AI response
+// Intelligent Jerry AI Response
 async function getJerryResponse(phone, message) {
-  try {
-    const conversation = conversations[phone];
-    const lowerMsg = message.toLowerCase();
-    
-    // Build context
-    const context = `You are Jerry, a friendly car dealership AI assistant via SMS. Keep responses SHORT (1-2 sentences max).
-Customer conversation so far: ${JSON.stringify(conversation.messages.slice(-5))}
-
-Your goals:
-1. Ask about vehicle preferences (type, budget)
-2. Offer to book test drive appointment
-3. Get name and preferred date/time
-4. Confirm appointment details
-
-Current message: ${message}`;
-    
-    // Check for booking intent
-    if (lowerMsg.includes('book') || lowerMsg.includes('appointment') || lowerMsg.includes('test drive') || lowerMsg.includes('schedule')) {
-      conversation.data.intent = 'booking';
-      if (!conversation.data.name) {
-        return "Great! What's your name?";
-      } else if (!conversation.data.date) {
-        return `Perfect ${conversation.data.name}! What day works best for you this week?`;
-      } else {
-        return `Got it! What time works best - morning (9-12) or afternoon (1-5)?`;
-      }
-    }
-    
-    // Check for callback
-    if (lowerMsg.includes('call') || lowerMsg.includes('phone')) {
-      conversation.data.intent = 'callback';
-      return "I'd be happy to have someone call you! What's the best time to reach you?";
-    }
-    
-    // Extract name if not set
-    if (!conversation.data.name && conversation.messages.length > 2) {
-      const words = message.split(' ');
-      if (words.length <= 3) {
-        conversation.data.name = message;
-        return `Nice to meet you, ${message}! What type of vehicle interests you - Sedan, SUV, or Truck?`;
-      }
-    }
-    
-    // Call Perplexity for intelligent response
-    const response = await fetch('https://api.perplexity.ai/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${process.env.PERPLEXITY_API_KEY}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        model: 'sonar-small-chat',
-        messages: [{ role: 'user', content: context }]
-      })
-    });
-    
-    const data = await response.json();
-    return data.choices[0].message.content.substring(0, 160); // SMS limit
-    
-  } catch (error) {
-    console.error('AI error:', error);
-    return "I'm here to help! Are you interested in booking a test drive?";
+  const conversation = conversations[phone];
+  const lowerMsg = message.toLowerCase();
+  
+  // Check for STOP
+  if (lowerMsg === 'stop') {
+    conversation.status = 'stopped';
+    return "You've been unsubscribed. Reply START to resume.";
   }
+  
+  // Stage 1: Vehicle Interest
+  if (conversation.stage === 'greeting' || !conversation.data.vehicleType) {
+    if (lowerMsg.includes('suv') || lowerMsg.includes('truck') || lowerMsg.includes('sedan') || 
+        lowerMsg.includes('car') || lowerMsg.includes('vehicle') || lowerMsg.includes('yes') || 
+        lowerMsg.includes('interested')) {
+      
+      // Extract vehicle type
+      if (lowerMsg.includes('suv')) conversation.data.vehicleType = 'SUV';
+      else if (lowerMsg.includes('truck')) conversation.data.vehicleType = 'Truck';
+      else if (lowerMsg.includes('sedan')) conversation.data.vehicleType = 'Sedan';
+      else conversation.data.vehicleType = 'Vehicle';
+      
+      conversation.stage = 'budget';
+      return `Great choice! What's your budget range for a ${conversation.data.vehicleType}? (Under $30k, $30k-$50k, $50k+)`;
+    }
+    return "What type of vehicle interests you? We have SUVs, Trucks, Sedans, and more!";
+  }
+  
+  // Stage 2: Budget
+  if (conversation.stage === 'budget' && !conversation.data.budget) {
+    if (lowerMsg.includes('30') || lowerMsg.includes('50') || lowerMsg.includes('k') || 
+        lowerMsg.includes('$') || lowerMsg.includes('thousand')) {
+      
+      if (lowerMsg.includes('30')) conversation.data.budget = 'Under $30k';
+      else if (lowerMsg.includes('50')) conversation.data.budget = '$30k-$50k';
+      else conversation.data.budget = '$50k+';
+      
+      conversation.stage = 'appointment';
+      return `Perfect! I have some great ${conversation.data.vehicleType}s in that range. Would you like to:\n1️⃣ Book a test drive\n2️⃣ Schedule a call back\nJust reply 1 or 2!`;
+    }
+    return "What's your budget? (e.g., Under $30k, $30k-$50k, or $50k+)";
+  }
+  
+  // Stage 3: Appointment/Callback
+  if (conversation.stage === 'appointment') {
+    if (lowerMsg.includes('1') || lowerMsg.includes('test') || lowerMsg.includes('drive') || lowerMsg.includes('appointment')) {
+      conversation.data.intent = 'test_drive';
+      conversation.stage = 'name';
+      return "Awesome! What's your name?";
+    }
+    
+    if (lowerMsg.includes('2') || lowerMsg.includes('call') || lowerMsg.includes('phone')) {
+      conversation.data.intent = 'callback';
+      conversation.stage = 'name';
+      return "Great! What's your name?";
+    }
+    
+    return "Would you like to:\n1️⃣ Book a test drive\n2️⃣ Schedule a call back\nReply 1 or 2!";
+  }
+  
+  // Stage 4: Get Name
+  if (conversation.stage === 'name' && !conversation.data.name) {
+    conversation.data.name = message;
+    conversation.stage = 'datetime';
+    
+    if (conversation.data.intent === 'test_drive') {
+      return `Nice to meet you, ${message}! When works best for your test drive? (e.g., Tomorrow afternoon, This Saturday, Next week)`;
+    } else {
+      return `Nice to meet you, ${message}! When's the best time to call you? (e.g., Tomorrow morning, This afternoon, Evening)`;
+    }
+  }
+  
+  // Stage 5: Date/Time
+  if (conversation.stage === 'datetime' && !conversation.data.datetime) {
+    conversation.data.datetime = message;
+    conversation.stage = 'confirmed';
+    
+    if (conversation.data.intent === 'test_drive') {
+      return `✅ Perfect ${conversation.data.name}! I've booked your test drive for ${message}. We'll text you the day before with our address. Excited to see you! Reply STOP to opt out.`;
+    } else {
+      return `✅ Got it ${conversation.data.name}! We'll call you ${message}. Looking forward to helping you find your perfect ${conversation.data.vehicleType}! Reply STOP to opt out.`;
+    }
+  }
+  
+  // Default helpful response
+  return "Thanks for your message! To help you better, let me know:\n• What vehicle type interests you?\n• Your budget range?\n• If you'd like a test drive or callback?";
 }
 
-// Regular chat endpoint (for web)
+// Regular chat
 app.post('/api/chat', async (req, res) => {
   try {
     const { message } = req.body;
@@ -181,21 +201,6 @@ app.post('/api/chat', async (req, res) => {
     });
     const data = await response.json();
     res.json({ success: true, message: data.choices[0].message.content });
-  } catch (error) {
-    res.json({ success: false, error: error.message });
-  }
-});
-
-// Manual SMS
-app.post('/api/send-sms', async (req, res) => {
-  try {
-    const { phone, message } = req.body;
-    const result = await twilioClient.messages.create({
-      from: process.env.TWILIO_PHONE_NUMBER,
-      to: phone,
-      body: message
-    });
-    res.json({ success: true, sid: result.sid });
   } catch (error) {
     res.json({ success: false, error: error.message });
   }
