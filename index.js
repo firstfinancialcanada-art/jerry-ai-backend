@@ -132,6 +132,31 @@ async function hasActiveConversation(phone) {
   }
 }
 
+// Delete conversation and its messages
+async function deleteConversation(phone) {
+  const client = await pool.connect();
+  try {
+    const conversation = await client.query(
+      'SELECT id FROM conversations WHERE customer_phone = $1 ORDER BY started_at DESC LIMIT 1',
+      [phone]
+    );
+    
+    if (conversation.rows.length > 0) {
+      const conversationId = conversation.rows[0].id;
+      
+      await client.query('DELETE FROM messages WHERE conversation_id = $1', [conversationId]);
+      await client.query('DELETE FROM conversations WHERE id = $1', [conversationId]);
+      
+      console.log('🗑️ Conversation deleted:', phone);
+      return true;
+    }
+    
+    return false;
+  } finally {
+    client.release();
+  }
+}
+
 // Save message to database
 async function saveMessage(conversationId, phone, role, content) {
   const client = await pool.connect();
@@ -199,7 +224,8 @@ app.get('/', (req, res) => {
       dashboard: '/dashboard',
       apiDashboard: '/api/dashboard',
       conversations: '/api/conversations',
-      conversation: '/api/conversation/:phone'
+      conversation: '/api/conversation/:phone',
+      deleteConversation: 'DELETE /api/conversation/:phone'
     },
     timestamp: new Date()
   });
@@ -323,11 +349,40 @@ app.get('/dashboard', async (req, res) => {
       border-radius: 8px;
       cursor: pointer;
       transition: all 0.3s;
+      position: relative;
     }
     .conversation-item:hover {
       border-color: #667eea;
       background: #f8f9ff;
       transform: translateX(5px);
+    }
+    .conversation-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .conversation-info {
+      flex: 1;
+    }
+    .btn-delete {
+      background: #ef4444;
+      color: white;
+      border: none;
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      font-size: 1.2rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.3s;
+      flex-shrink: 0;
+      margin-left: 15px;
+    }
+    .btn-delete:hover {
+      background: #dc2626;
+      transform: scale(1.1);
     }
     .conversation-item .phone { font-weight: bold; font-size: 1.1rem; color: #333; }
     .conversation-item .name { color: #667eea; font-size: 0.9rem; margin-left: 10px; }
@@ -557,6 +612,30 @@ app.get('/dashboard', async (req, res) => {
       }
     }
     
+    async function deleteConversation(phone, event) {
+      event.stopPropagation();
+      
+      if (!confirm('Are you sure you want to delete this conversation? This cannot be undone.')) {
+        return;
+      }
+      
+      try {
+        const response = await fetch('/api/conversation/' + encodeURIComponent(phone), {
+          method: 'DELETE'
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+          loadDashboard();
+        } else {
+          alert('Error deleting conversation: ' + (data.error || 'Unknown error'));
+        }
+      } catch (error) {
+        alert('Error deleting conversation: ' + error.message);
+      }
+    }
+    
     async function loadDashboard() {
       try {
         const statsData = await fetch('/api/dashboard').then(r => r.json());
@@ -573,19 +652,24 @@ app.get('/dashboard', async (req, res) => {
           conversationList.innerHTML = '<div class="empty-state">No conversations yet. Use "Launch Jerry" above to send your first SMS!</div>';
         } else {
           conversationList.innerHTML = conversations.map(conv => \`
-            <div class="conversation-item" onclick="viewConversation('\${conv.customer_phone}', this)">
-              <div>
-                <span class="phone">\${conv.customer_phone}</span>
-                <span class="name">\${conv.customer_name || 'Unknown'}</span>
-                <span class="badge badge-\${conv.status}">\${conv.status}</span>
+            <div class="conversation-item">
+              <div class="conversation-header">
+                <div class="conversation-info" onclick="viewConversation('\${conv.customer_phone}', this)">
+                  <div>
+                    <span class="phone">\${conv.customer_phone}</span>
+                    <span class="name">\${conv.customer_name || 'Unknown'}</span>
+                    <span class="badge badge-\${conv.status}">\${conv.status}</span>
+                  </div>
+                  <div class="info">
+                    \${conv.vehicle_type || 'No vehicle selected'} • 
+                    \${conv.budget || 'No budget set'} • 
+                    Stage: \${conv.stage} • 
+                    \${conv.message_count} messages
+                  </div>
+                  <div class="info">Started: \${new Date(conv.started_at).toLocaleString()}</div>
+                </div>
+                <button class="btn-delete" onclick="deleteConversation('\${conv.customer_phone}', event)" title="Delete conversation">×</button>
               </div>
-              <div class="info">
-                \${conv.vehicle_type || 'No vehicle selected'} • 
-                \${conv.budget || 'No budget set'} • 
-                Stage: \${conv.stage} • 
-                \${conv.message_count} messages
-              </div>
-              <div class="info">Started: \${new Date(conv.started_at).toLocaleString()}</div>
               <div class="messages-container" id="messages-\${conv.customer_phone.replace(/[^0-9]/g, '')}"></div>
             </div>
           \`).join('');
@@ -756,6 +840,22 @@ app.get('/api/conversation/:phone', async (req, res) => {
     res.json({ error: error.message });
   } finally {
     client.release();
+  }
+});
+
+// API: Delete conversation
+app.delete('/api/conversation/:phone', async (req, res) => {
+  try {
+    const { phone } = req.params;
+    const deleted = await deleteConversation(phone);
+    
+    if (deleted) {
+      res.json({ success: true, message: 'Conversation deleted' });
+    } else {
+      res.json({ success: false, error: 'Conversation not found' });
+    }
+  } catch (error) {
+    res.json({ success: false, error: error.message });
   }
 });
 
