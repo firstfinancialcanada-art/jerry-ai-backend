@@ -1325,13 +1325,6 @@ app.post('/api/sms-webhook', async (req, res) => {
         const conversation = await getOrCreateConversation(phone);
         await saveMessage(conversation.id, phone, 'user', message);
         
-        try {
-          const emailSubject = '🚨 New Message from ' + (conversation.customer_name || formatPhone(phone));
-          const emailBody = '<div style="font-family: Arial; max-width: 600px;"><div style="background: linear-gradient(135deg, #1e3a5f 0%, #2c4e6f 100%); padding: 20px; border-radius: 10px 10px 0 0;"><h1 style="color: white; margin: 0;">🚨 New Customer Message</h1></div><div style="background: #f7fafc; padding: 25px; border-radius: 0 0 10px 10px;"><table><tr><td style="padding: 12px; font-weight: bold;">Phone:</td><td style="padding: 12px;">' + formatPhone(phone) + '</td></tr><tr><td style="padding: 12px; font-weight: bold;">Name:</td><td style="padding: 12px;">' + (conversation.customer_name||'Not provided') + '</td></tr><tr><td style="padding: 12px; font-weight: bold;">Message:</td><td style="padding: 12px; font-weight: 600;">' + message + '</td></tr></table></div></div>';
-          await sendEmailNotification(emailSubject, emailBody);
-        } catch (err) { 
-          console.error('Email error:', err); 
-        }
         
         await touchConversation(conversation.id);
         await logAnalytics('message_received', phone, { message });
@@ -1358,7 +1351,15 @@ app.post('/api/sms-webhook', async (req, res) => {
     })();
     
   } catch (error) {
-    console.error('❌ Webhook error:', error);
+    console.error('❌ Webhook error:', error);        
+        // Send email notification (non-blocking, won't slow down SMS)
+        sendEmailNotification(
+          '🚨 New Message from ' + (conversation.customer_name || formatPhone(phone)),
+          '<div style="font-family: Arial; max-width: 600px;"><div style="background: linear-gradient(135deg, #1e3a5f 0%, #2c4e6f 100%); padding: 20px; border-radius: 10px 10px 0 0;"><h1 style="color: white; margin: 0;">🚨 New Customer Message</h1></div><div style="background: #f7fafc; padding: 25px; border-radius: 0 0 10px 10px;"><table><tr><td style="padding: 12px; font-weight: bold;">Phone:</td><td style="padding: 12px;">' + formatPhone(phone) + '</td></tr><tr><td style="padding: 12px; font-weight: bold;">Name:</td><td style="padding: 12px;">' + (conversation.customer_name||'Not provided') + '</td></tr><tr><td style="padding: 12px; font-weight: bold;">Message:</td><td style="padding: 12px; font-weight: 600;">' + message + '</td></tr></table></div></div>'
+        ).catch(err => {
+          console.error('Email error:', err);
+        });
+
     res.type('text/xml').send('<Response></Response>');
   }
 });
