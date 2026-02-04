@@ -542,77 +542,42 @@ app.get('/dashboard', async (req, res) => {
       color: #991b1b;
     }
     
-    .appointment-card, .callback-card {
+    .appointment-card {
       padding: 15px;
+      background: #f0fdf4;
+      border-left: 4px solid #4ade80;
       border-radius: 8px;
       margin-bottom: 15px;
       cursor: pointer;
       transition: all 0.3s;
-      position: relative;
-    }
-    .appointment-card {
-      background: #f0fdf4;
-      border-left: 4px solid #4ade80;
     }
     .appointment-card:hover {
       background: #dcfce7;
       transform: translateX(5px);
     }
     .callback-card {
+      padding: 15px;
       background: #fef3c7;
       border-left: 4px solid #fbbf24;
+      border-radius: 8px;
+      margin-bottom: 15px;
+      cursor: pointer;
+      transition: all 0.3s;
     }
     .callback-card:hover {
       background: #fde68a;
       transform: translateX(5px);
     }
-    .card-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-    .card-title { 
-      font-weight: bold; 
-      color: #333; 
-      font-size: 1.1rem;
-      flex: 1;
-    }
-    .card-preview { 
-      font-size: 0.85rem; 
-      color: #666; 
-      margin-top: 8px; 
-    }
-    .expand-icon {
-      font-size: 1.5rem;
-      color: #c41e3a;
-      transition: transform 0.3s;
-      user-select: none;
-    }
-    .expand-icon.expanded {
-      transform: rotate(180deg);
-    }
-    .card-details {
-      display: none;
-      margin-top: 15px;
-      padding-top: 15px;
-      border-top: 2px solid rgba(0,0,0,0.1);
-    }
-    .card-details.visible {
-      display: block;
-    }
-    .detail-row {
-      display: flex;
-      margin-bottom: 8px;
-      font-size: 0.9rem;
-    }
-    .detail-label {
-      font-weight: 600;
-      color: #333;
-      min-width: 140px;
-    }
-    .detail-value {
-      color: #666;
-    }
+    .card-title { font-weight: bold; color: #333; font-size: 1.1rem; flex: 1; }
+    .card-preview { font-size: 0.85rem; color: #666; margin-top: 8px; }
+    .card-header { display: flex; justify-content: space-between; align-items: center; }
+    .expand-icon { font-size: 1.5rem; color: #c41e3a; transition: transform 0.3s; user-select: none; }
+    .expand-icon.expanded { transform: rotate(180deg); }
+    .card-details { display: none; margin-top: 15px; padding-top: 15px; border-top: 2px solid rgba(0,0,0,0.1); }
+    .card-details.visible { display: block; }
+    .detail-row { display: flex; margin-bottom: 8px; font-size: 0.9rem; }
+    .detail-label { font-weight: 600; color: #333; min-width: 140px; }
+    .detail-value { color: #666; }
     .card-info { font-size: 0.9rem; color: #666; margin-top: 4px; }
     
     .loading { text-align: center; color: #666; padding: 40px; }
@@ -688,7 +653,7 @@ app.get('/dashboard', async (req, res) => {
     
     <div class="section">
       <h2>📊 Analytics & Insights</h2>
-      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; margin-bottom: 20px;" id="analyticsCards">
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; margin-bottom: 20px;">
         <div style="background: linear-gradient(135deg, #1e3a5f 0%, #2c4e6f 100%); padding: 25px; border-radius: 12px; color: white; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
           <div style="font-size: 0.9rem; opacity: 0.9; margin-bottom: 8px;">Conversion Rate</div>
           <div style="font-size: 2.5rem; font-weight: bold;" id="conversionRate">-</div>
@@ -713,16 +678,16 @@ app.get('/dashboard', async (req, res) => {
       <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px;">
         <div style="background: #f0f4f8; padding: 20px; border-radius: 12px; border-left: 4px solid #1e3a5f;">
           <h3 style="margin: 0 0 15px 0; color: #1e3a5f; font-size: 1rem;">Top Vehicle Types</h3>
-          <div id="topVehicles" style="font-size: 0.9rem; color: #666;">Loading...</div>
+          <div id="topVehicles" style="font-size: 0.9rem; color: #666;"><div style="padding: 8px 0;">Loading...</div></div>
         </div>
         <div style="background: #f0f4f8; padding: 20px; border-radius: 12px; border-left: 4px solid #10b981;">
           <h3 style="margin: 0 0 15px 0; color: #10b981; font-size: 1rem;">Budget Distribution</h3>
-          <div id="budgetDist" style="font-size: 0.9rem; color: #666;">Loading...</div>
+          <div id="budgetDist" style="font-size: 0.9rem; color: #666;"><div style="padding: 8px 0;">Loading...</div></div>
         </div>
       </div>
     </div>
 
-    <div class="section">
+        <div class="section">
       <h2>📱 Launch SMS - Send SMS Campaign</h2>
       <form class="launch-form" id="launchForm" onsubmit="sendSMS(event)">
         <div class="form-group">
@@ -944,26 +909,28 @@ app.get('/dashboard', async (req, res) => {
     function toggleAppointment(id) {
       const details = document.getElementById('apt-details-' + id);
       const icon = document.getElementById('apt-icon-' + id);
-
-      if (details.classList.contains('visible')) {
-        details.classList.remove('visible');
-        icon.classList.remove('expanded');
-      } else {
-        details.classList.add('visible');
-        icon.classList.add('expanded');
+      if (details && icon) {
+        if (details.classList.contains('visible')) {
+          details.classList.remove('visible');
+          icon.classList.remove('expanded');
+        } else {
+          details.classList.add('visible');
+          icon.classList.add('expanded');
+        }
       }
     }
 
     function toggleCallback(id) {
       const details = document.getElementById('cb-details-' + id);
       const icon = document.getElementById('cb-icon-' + id);
-
-      if (details.classList.contains('visible')) {
-        details.classList.remove('visible');
-        icon.classList.remove('expanded');
-      } else {
-        details.classList.add('visible');
-        icon.classList.add('expanded');
+      if (details && icon) {
+        if (details.classList.contains('visible')) {
+          details.classList.remove('visible');
+          icon.classList.remove('expanded');
+        } else {
+          details.classList.add('visible');
+          icon.classList.add('expanded');
+        }
       }
     }
 
@@ -971,26 +938,30 @@ app.get('/dashboard', async (req, res) => {
       try {
         const statsData = await fetch('/api/dashboard').then(r => r.json());
 
-        // Load analytics
-        const analyticsData = await fetch('/api/analytics').then(r => r.json());
-        if (!analyticsData.error) {
-          document.getElementById('conversionRate').textContent = analyticsData.conversionRate + '%';
-          document.getElementById('conversionDetail').textContent = analyticsData.totalConverted + ' of ' + analyticsData.totalConversations + ' conversations';
-          document.getElementById('responseRate').textContent = analyticsData.responseRate + '%';
-          document.getElementById('responseDetail').textContent = analyticsData.totalResponded + ' customers responded';
-          document.getElementById('avgMessages').textContent = analyticsData.avgMessages;
-          document.getElementById('weekConversations').textContent = analyticsData.weekConversations;
-          document.getElementById('weekDetail').textContent = analyticsData.weekConverted + ' converted this week';
+        // Load Analytics
+        try {
+          const analyticsData = await fetch('/api/analytics').then(r => r.json());
+          if (analyticsData && !analyticsData.error) {
+            document.getElementById('conversionRate').textContent = analyticsData.conversionRate + '%';
+            document.getElementById('conversionDetail').textContent = analyticsData.totalConverted + ' of ' + analyticsData.totalConversations + ' conversations';
+            document.getElementById('responseRate').textContent = analyticsData.responseRate + '%';
+            document.getElementById('responseDetail').textContent = analyticsData.totalResponded + ' customers responded';
+            document.getElementById('avgMessages').textContent = analyticsData.avgMessages;
+            document.getElementById('weekConversations').textContent = analyticsData.weekConversations;
+            document.getElementById('weekDetail').textContent = analyticsData.weekConverted + ' converted this week';
 
-          const topVehiclesHTML = analyticsData.topVehicles.length > 0 
-            ? analyticsData.topVehicles.map((v, i) => '<div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #ddd;"><span>' + (i + 1) + '. ' + v.vehicle_type + '</span><span style="font-weight: bold; color: #1e3a5f;">' + v.count + '</span></div>').join('')
-            : '<div style="padding: 8px 0; color: #999;">No data yet</div>';
-          document.getElementById('topVehicles').innerHTML = topVehiclesHTML;
+            const topVeh = analyticsData.topVehicles.length > 0 
+              ? analyticsData.topVehicles.map((v, i) => '<div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #ddd;"><span>' + (i+1) + '. ' + v.vehicle_type + '</span><span style="font-weight: bold; color: #1e3a5f;">' + v.count + '</span></div>').join('')
+              : '<div style="padding: 8px 0; color: #999;">No data yet</div>';
+            document.getElementById('topVehicles').innerHTML = topVeh;
 
-          const budgetHTML = analyticsData.budgetDist.length > 0 
-            ? analyticsData.budgetDist.map(b => '<div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #ddd;"><span>' + b.budget + '</span><span style="font-weight: bold; color: #10b981;">' + b.count + '</span></div>').join('')
-            : '<div style="padding: 8px 0; color: #999;">No data yet</div>';
-          document.getElementById('budgetDist').innerHTML = budgetHTML;
+            const budg = analyticsData.budgetDist.length > 0 
+              ? analyticsData.budgetDist.map(b => '<div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #ddd;"><span>' + b.budget + '</span><span style="font-weight: bold; color: #10b981;">' + b.count + '</span></div>').join('')
+              : '<div style="padding: 8px 0; color: #999;">No data yet</div>';
+            document.getElementById('budgetDist').innerHTML = budg;
+          }
+        } catch (e) {
+          console.error('Analytics load error:', e);
         }
 
         document.getElementById('totalCustomers').textContent = statsData.stats.totalCustomers;
@@ -1034,12 +1005,22 @@ app.get('/dashboard', async (req, res) => {
           appointmentsList.innerHTML = '<div class="empty-state">No appointments yet.</div>';
         } else {
           appointmentsList.innerHTML = statsData.recentAppointments.map(apt => \`
-            <div class="appointment-card">
-              <div class="card-title">🚗 \${apt.customer_name} - \${apt.vehicle_type}</div>
-              <div class="card-info">📞 \${apt.customer_phone}</div>
-              <div class="card-info">💰 Budget: \${apt.budget}\${apt.budget_amount ? ' ($' + apt.budget_amount.toLocaleString() + ')' : ''}</div>
-              <div class="card-info">📅 Date: \${apt.datetime}</div>
-              <div class="card-info">✅ Booked: \${new Date(apt.created_at).toLocaleString()}</div>
+            <div class="appointment-card" onclick="toggleAppointment(\${apt.id})">
+              <div class="card-header">
+                <div style="flex: 1;">
+                  <div class="card-title">🚗 \${apt.customer_name} - \${apt.vehicle_type}</div>
+                  <div class="card-preview">📞 \${apt.customer_phone} • 📅 \${apt.datetime}</div>
+                </div>
+                <span class="expand-icon" id="apt-icon-\${apt.id}">▼</span>
+              </div>
+              <div class="card-details" id="apt-details-\${apt.id}">
+                <div class="detail-row"><span class="detail-label">Customer Name:</span><span class="detail-value">\${apt.customer_name}</span></div>
+                <div class="detail-row"><span class="detail-label">Phone Number:</span><span class="detail-value">\${apt.customer_phone}</span></div>
+                <div class="detail-row"><span class="detail-label">Vehicle Type:</span><span class="detail-value">\${apt.vehicle_type}</span></div>
+                <div class="detail-row"><span class="detail-label">Budget:</span><span class="detail-value">\${apt.budget}\${apt.budget_amount ? ' ($' + apt.budget_amount.toLocaleString() + ')' : ''}</span></div>
+                <div class="detail-row"><span class="detail-label">Appointment Date/Time:</span><span class="detail-value">\${apt.datetime}</span></div>
+                <div class="detail-row"><span class="detail-label">Booked On:</span><span class="detail-value">\${new Date(apt.created_at).toLocaleString()}</span></div>
+              </div>
             </div>
           \`).join('');
         }
@@ -1049,12 +1030,22 @@ app.get('/dashboard', async (req, res) => {
           callbacksList.innerHTML = '<div class="empty-state">No callback requests yet.</div>';
         } else {
           callbacksList.innerHTML = statsData.recentCallbacks.map(cb => \`
-            <div class="callback-card">
-              <div class="card-title">📞 \${cb.customer_name} - \${cb.vehicle_type}</div>
-              <div class="card-info">📞 \${cb.customer_phone}</div>
-              <div class="card-info">💰 Budget: \${cb.budget}\${cb.budget_amount ? ' ($' + cb.budget_amount.toLocaleString() + ')' : ''}</div>
-              <div class="card-info">⏰ Preferred Time: \${cb.datetime}</div>
-              <div class="card-info">✅ Requested: \${new Date(cb.created_at).toLocaleString()}</div>
+            <div class="callback-card" onclick="toggleCallback(\${cb.id})">
+              <div class="card-header">
+                <div style="flex: 1;">
+                  <div class="card-title">📞 \${cb.customer_name} - \${cb.vehicle_type}</div>
+                  <div class="card-preview">📞 \${cb.customer_phone} • ⏰ \${cb.datetime}</div>
+                </div>
+                <span class="expand-icon" id="cb-icon-\${cb.id}">▼</span>
+              </div>
+              <div class="card-details" id="cb-details-\${cb.id}">
+                <div class="detail-row"><span class="detail-label">Customer Name:</span><span class="detail-value">\${cb.customer_name}</span></div>
+                <div class="detail-row"><span class="detail-label">Phone Number:</span><span class="detail-value">\${cb.customer_phone}</span></div>
+                <div class="detail-row"><span class="detail-label">Vehicle Type:</span><span class="detail-value">\${cb.vehicle_type}</span></div>
+                <div class="detail-row"><span class="detail-label">Budget:</span><span class="detail-value">\${cb.budget}\${cb.budget_amount ? ' ($' + cb.budget_amount.toLocaleString() + ')' : ''}</span></div>
+                <div class="detail-row"><span class="detail-label">Preferred Call Time:</span><span class="detail-value">\${cb.datetime}</span></div>
+                <div class="detail-row"><span class="detail-label">Requested On:</span><span class="detail-value">\${new Date(cb.created_at).toLocaleString()}</span></div>
+              </div>
             </div>
           \`).join('');
         }
@@ -1652,7 +1643,7 @@ app.get('/api/export/analytics', async (req, res) => {
   }
 });
 
-// API: Analytics data
+// API: Analytics Dashboard Data
 app.get('/api/analytics', async (req, res) => {
   const client = await pool.connect();
   try {
@@ -1662,21 +1653,21 @@ app.get('/api/analytics', async (req, res) => {
     const converted = await client.query("SELECT COUNT(*) as count FROM conversations WHERE status = 'converted'");
     const totalConverted = parseInt(converted.rows[0].count);
 
-    const responded = await client.query('SELECT COUNT(DISTINCT conversation_id) as count FROM messages WHERE role = \'user\'');
+    const responded = await client.query("SELECT COUNT(DISTINCT conversation_id) as count FROM messages WHERE role = 'user'");
     const totalResponded = parseInt(responded.rows[0].count);
 
-    const avgMsgs = await client.query('SELECT AVG(msg_count)::numeric(10,1) as avg FROM (SELECT conversation_id, COUNT(*) as msg_count FROM messages GROUP BY conversation_id) as counts');
-    const avgMessages = avgMsgs.rows[0].avg ? parseFloat(avgMsgs.rows[0].avg) : 0;
+    const avgMsgs = await client.query("SELECT COALESCE(AVG(msg_count), 0)::numeric(10,1) as avg FROM (SELECT conversation_id, COUNT(*) as msg_count FROM messages GROUP BY conversation_id) as counts");
+    const avgMessages = parseFloat(avgMsgs.rows[0].avg || 0);
 
-    const weekConvs = await client.query("SELECT COUNT(*) as count FROM conversations WHERE started_at >= NOW() - INTERVAL \'7 days\'");
+    const weekConvs = await client.query("SELECT COUNT(*) as count FROM conversations WHERE started_at >= NOW() - INTERVAL '7 days'");
     const weekConversations = parseInt(weekConvs.rows[0].count);
 
-    const weekConverted = await client.query("SELECT COUNT(*) as count FROM conversations WHERE status = \'converted\' AND started_at >= NOW() - INTERVAL \'7 days\'");
+    const weekConverted = await client.query("SELECT COUNT(*) as count FROM conversations WHERE status = 'converted' AND started_at >= NOW() - INTERVAL '7 days'");
     const weekConvertedCount = parseInt(weekConverted.rows[0].count);
 
-    const topVehicles = await client.query("SELECT vehicle_type, COUNT(*) as count FROM conversations WHERE vehicle_type IS NOT NULL AND vehicle_type != \'\'  GROUP BY vehicle_type ORDER BY count DESC LIMIT 5");
+    const topVehicles = await client.query("SELECT vehicle_type, COUNT(*) as count FROM conversations WHERE vehicle_type IS NOT NULL AND vehicle_type != '' GROUP BY vehicle_type ORDER BY count DESC LIMIT 5");
 
-    const budgets = await client.query("SELECT budget, COUNT(*) as count FROM conversations WHERE budget IS NOT NULL AND budget != \'\'  GROUP BY budget ORDER BY count DESC");
+    const budgets = await client.query("SELECT budget, COUNT(*) as count FROM conversations WHERE budget IS NOT NULL AND budget != '' GROUP BY budget ORDER BY count DESC");
 
     res.json({
       conversionRate: totalConversations > 0 ? ((totalConverted / totalConversations) * 100).toFixed(1) : '0.0',
@@ -1691,7 +1682,7 @@ app.get('/api/analytics', async (req, res) => {
       budgetDist: budgets.rows
     });
   } catch (error) {
-    console.error('Analytics error:', error);
+    console.error('❌ Analytics error:', error);
     res.json({ error: error.message });
   } finally {
     client.release();
