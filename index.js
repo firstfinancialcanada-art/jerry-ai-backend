@@ -29,15 +29,12 @@ pool.connect()
 
 
 
-// ===== EMAIL NOTIFICATION SETUP (BREVO SMTP) =====
+// ===== EMAIL & HELPERS =====
 const emailTransporter = nodemailer.createTransport({
   host: process.env.SMTP_HOST || 'smtp-relay.brevo.com',
   port: parseInt(process.env.SMTP_PORT) || 587,
   secure: false,
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASSWORD
-  }
+  auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_PASSWORD }
 });
 
 async function sendEmailNotification(subject, htmlContent) {
@@ -268,12 +265,7 @@ app.get('/', (req, res) => {
       conversations: '/api/conversations',
       conversation: '/api/conversation/:phone',
       deleteConversation: 'DELETE /api/conversation/:phone',
-      manualReply: 'POST /api/manual-reply',
-      testEmail: '/test-email',
-      exportAppointments: '/api/export/appointments',
-      exportCallbacks: '/api/export/callbacks',
-      exportConversations: '/api/export/conversations',
-      exportAnalytics: '/api/export/analytics'
+      manualReply: 'POST /api/manual-reply', testEmail: '/test-email', exportAppointments: '/api/export/appointments', exportCallbacks: '/api/export/callbacks', exportConversations: '/api/export/conversations', exportAnalytics: '/api/export/analytics'
     },
     timestamp: new Date()
   });
@@ -600,23 +592,15 @@ app.get('/dashboard', async (req, res) => {
 </head>
 <body>
 
-      <!-- EXPORT DATA SECTION -->
+      <!-- EXPORT SECTION -->
       <div style="max-width: 1200px; margin: 20px auto; background: white; padding: 30px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.1);">
-        <h2 style="margin: 0 0 10px 0; color: #2d3748; font-size: 26px;">📊 Export Data to CSV</h2>
-        <p style="color: #718096; margin-bottom: 25px;">Download your data for backup or analysis in Excel/Google Sheets</p>
+        <h2 style="margin: 0 0 10px 0; color: #2d3748;">📊 Export Data to CSV</h2>
+        <p style="color: #718096; margin-bottom: 25px;">Download data for Excel/Google Sheets</p>
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
-          <a href="/api/export/appointments" download style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; padding: 18px; border-radius: 10px; text-decoration: none; font-weight: bold; text-align: center; box-shadow: 0 4px 6px rgba(16,185,129,0.3); transition: all 0.3s;" onmouseover="this.style.transform='translateY(-3px)'" onmouseout="this.style.transform='translateY(0)'">
-            📅 Appointments
-          </a>
-          <a href="/api/export/callbacks" download style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: white; padding: 18px; border-radius: 10px; text-decoration: none; font-weight: bold; text-align: center; box-shadow: 0 4px 6px rgba(245,158,11,0.3); transition: all 0.3s;" onmouseover="this.style.transform='translateY(-3px)'" onmouseout="this.style.transform='translateY(0)'">
-            📞 Callbacks
-          </a>
-          <a href="/api/export/conversations" download style="background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); color: white; padding: 18px; border-radius: 10px; text-decoration: none; font-weight: bold; text-align: center; box-shadow: 0 4px 6px rgba(59,130,246,0.3); transition: all 0.3s;" onmouseover="this.style.transform='translateY(-3px)'" onmouseout="this.style.transform='translateY(0)'">
-            💬 Conversations
-          </a>
-          <a href="/api/export/analytics" download style="background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%); color: white; padding: 18px; border-radius: 10px; text-decoration: none; font-weight: bold; text-align: center; box-shadow: 0 4px 6px rgba(139,92,246,0.3); transition: all 0.3s;" onmouseover="this.style.transform='translateY(-3px)'" onmouseout="this.style.transform='translateY(0)'">
-            📈 Analytics
-          </a>
+          <a href="/api/export/appointments" download style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; padding: 18px; border-radius: 10px; text-decoration: none; font-weight: bold; text-align: center; box-shadow: 0 4px 6px rgba(16,185,129,0.3); transition: all 0.3s;" onmouseover="this.style.transform='translateY(-3px)'" onmouseout="this.style.transform='translateY(0)'">📅 Appointments</a>
+          <a href="/api/export/callbacks" download style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: white; padding: 18px; border-radius: 10px; text-decoration: none; font-weight: bold; text-align: center; box-shadow: 0 4px 6px rgba(245,158,11,0.3); transition: all 0.3s;" onmouseover="this.style.transform='translateY(-3px)'" onmouseout="this.style.transform='translateY(0)'">📞 Callbacks</a>
+          <a href="/api/export/conversations" download style="background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); color: white; padding: 18px; border-radius: 10px; text-decoration: none; font-weight: bold; text-align: center; box-shadow: 0 4px 6px rgba(59,130,246,0.3); transition: all 0.3s;" onmouseover="this.style.transform='translateY(-3px)'" onmouseout="this.style.transform='translateY(0)'">💬 Conversations</a>
+          <a href="/api/export/analytics" download style="background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%); color: white; padding: 18px; border-radius: 10px; text-decoration: none; font-weight: bold; text-align: center; box-shadow: 0 4px 6px rgba(139,92,246,0.3); transition: all 0.3s;" onmouseover="this.style.transform='translateY(-3px)'" onmouseout="this.style.transform='translateY(0)'">📈 Analytics</a>
         </div>
       </div>
 
@@ -1202,18 +1186,11 @@ app.post('/api/sms-webhook', async (req, res) => {
     await getOrCreateCustomer(phone);
     const conversation = await getOrCreateConversation(phone);
     await saveMessage(conversation.id, phone, 'user', message);
-
-    // 📧 Email notification for new customer message
     try {
-      const customerName = conversation.customer_name || 'Not provided';
-      const vehicleInfo = conversation.vehicle_type || 'Not provided yet';
       const emailSubject = '🚨 New Message from ' + (conversation.customer_name || formatPhone(phone));
-      const emailBody = '<div style="font-family: Arial; max-width: 600px;"><div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 20px; border-radius: 10px 10px 0 0;"><h1 style="color: white; margin: 0;">🚨 New Customer Message</h1></div><div style="background: #f7fafc; padding: 25px; border-radius: 0 0 10px 10px;"><table style="width: 100%;"><tr><td style="padding: 12px; font-weight: bold;">Phone:</td><td style="padding: 12px;">' + formatPhone(phone) + '</td></tr><tr><td style="padding: 12px; font-weight: bold;">Name:</td><td style="padding: 12px;">' + customerName + '</td></tr><tr><td style="padding: 12px; font-weight: bold;">Vehicle Interest:</td><td style="padding: 12px;">' + vehicleInfo + '</td></tr><tr><td style="padding: 12px; font-weight: bold;">Message:</td><td style="padding: 12px; font-weight: 600;">' + message + '</td></tr></table><p style="color: #718096; font-size: 12px; text-align: center; margin-top: 20px;">' + new Date().toLocaleString() + '</p></div></div>';
+      const emailBody = '<div style="font-family: Arial; max-width: 600px;"><div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 20px; border-radius: 10px 10px 0 0;"><h1 style="color: white; margin: 0;">🚨 New Customer Message</h1></div><div style="background: #f7fafc; padding: 25px; border-radius: 0 0 10px 10px;"><table><tr><td style="padding: 12px; font-weight: bold;">Phone:</td><td style="padding: 12px;">' + formatPhone(phone) + '</td></tr><tr><td style="padding: 12px; font-weight: bold;">Name:</td><td style="padding: 12px;">' + (conversation.customer_name||'Not provided') + '</td></tr><tr><td style="padding: 12px; font-weight: bold;">Message:</td><td style="padding: 12px; font-weight: 600;">' + message + '</td></tr></table></div></div>';
       await sendEmailNotification(emailSubject, emailBody);
-    } catch (err) { 
-      console.error('Email error:', err); 
-    }
-
+    } catch (err) { console.error('Email error:', err); }
     await touchConversation(conversation.id);
     await logAnalytics('message_received', phone, { message });
     
@@ -1421,30 +1398,16 @@ async function getJerryResponse(phone, message, conversation) {
     
     if (conversation.intent === 'test_drive') {
       await saveAppointment(appointmentData);
-
-      // 📧 Email for appointment
       try {
-        const apptSubject = '📅 Test Drive: ' + conversation.customer_name;
-        const apptBody = '<div style="font-family: Arial; max-width: 600px;"><div style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); padding: 20px; border-radius: 10px 10px 0 0;"><h1 style="color: white; margin: 0;">📅 New Appointment!</h1></div><div style="background: #f7fafc; padding: 25px; border-radius: 0 0 10px 10px;"><table style="width: 100%;"><tr><td style="padding: 12px; font-weight: bold;">Customer:</td><td style="padding: 12px;">' + conversation.customer_name + '</td></tr><tr><td style="padding: 12px; font-weight: bold;">Phone:</td><td style="padding: 12px;">' + formatPhone(phone) + '</td></tr><tr><td style="padding: 12px; font-weight: bold;">Vehicle:</td><td style="padding: 12px;">' + (conversation.vehicle_type || 'Not specified') + '</td></tr><tr><td style="padding: 12px; font-weight: bold;">Date/Time:</td><td style="padding: 12px; color: #10b981; font-weight: 600;">' + message + '</td></tr></table><div style="margin-top: 20px; padding: 15px; background: #d1fae5; border-radius: 4px;"><p style="margin: 0; color: #065f46; font-weight: bold;">✅ Customer is coming for a test drive!</p></div></div></div>';
-        await sendEmailNotification(apptSubject, apptBody);
-      } catch (e) { 
-        console.error('Appt email error:', e); 
-      }
-
+        await sendEmailNotification('📅 Test Drive: ' + conversation.customer_name, '<div style="font-family: Arial;"><h1 style="color: #10b981;">📅 New Appointment!</h1><p><strong>Customer:</strong> ' + conversation.customer_name + '</p><p><strong>Phone:</strong> ' + formatPhone(phone) + '</p><p><strong>Date/Time:</strong> ' + message + '</p></div>');
+      } catch (e) { }
       await logAnalytics('appointment_booked', phone, appointmentData);
       return `✅ Perfect ${conversation.customer_name}! I've booked your test drive for ${message}.\n\n📍 We're in Calgary, Alberta and we deliver all across Canada!\n📧 Confirmation sent!\n\nLooking forward to seeing you! Reply STOP to opt out.`;
     } else {
       await saveCallback(appointmentData);
-
-      // 📧 Email for callback
       try {
-        const cbSubject = '📞 Callback: ' + conversation.customer_name;
-        const cbBody = '<div style="font-family: Arial; max-width: 600px;"><div style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); padding: 20px; border-radius: 10px 10px 0 0;"><h1 style="color: white; margin: 0;">📞 Callback Requested!</h1></div><div style="background: #f7fafc; padding: 25px; border-radius: 0 0 10px 10px;"><table style="width: 100%;"><tr><td style="padding: 12px; font-weight: bold;">Customer:</td><td style="padding: 12px;">' + conversation.customer_name + '</td></tr><tr><td style="padding: 12px; font-weight: bold;">Phone:</td><td style="padding: 12px;">' + formatPhone(phone) + '</td></tr><tr><td style="padding: 12px; font-weight: bold;">Vehicle:</td><td style="padding: 12px;">' + (conversation.vehicle_type || 'Not specified') + '</td></tr><tr><td style="padding: 12px; font-weight: bold;">Preferred Time:</td><td style="padding: 12px; color: #f59e0b; font-weight: 600;">' + message + '</td></tr></table><div style="margin-top: 20px; padding: 15px; background: #fef3c7; border-radius: 4px;"><p style="margin: 0; color: #92400e; font-weight: bold;">⚠️ Customer waiting for your call!</p></div></div></div>';
-        await sendEmailNotification(cbSubject, cbBody);
-      } catch (e) { 
-        console.error('Callback email error:', e); 
-      }
-
+        await sendEmailNotification('📞 Callback: ' + conversation.customer_name, '<div style="font-family: Arial;"><h1 style="color: #f59e0b;">📞 Callback Requested!</h1><p><strong>Customer:</strong> ' + conversation.customer_name + '</p><p><strong>Phone:</strong> ' + formatPhone(phone) + '</p><p><strong>Time:</strong> ' + message + '</p></div>');
+      } catch (e) { }
       await logAnalytics('callback_requested', phone, appointmentData);
       return `✅ Got it ${conversation.customer_name}! One of our managers will call you ${message} with all the details.\n\nWe're excited to help you find your perfect ${conversation.vehicle_type}!\n\nTalk soon! Reply STOP to opt out.`;
     }
@@ -1458,41 +1421,31 @@ async function getJerryResponse(phone, message, conversation) {
 }
 
 
-// ===== EMAIL TEST ENDPOINT =====
+// ===== TEST & EXPORT ENDPOINTS =====
 app.get('/test-email', async (req, res) => {
   try {
-    console.log('🧪 Testing email...');
-    const testHtml = '<div style="font-family: Arial; padding: 20px;"><h1 style="color: #667eea;">✅ Email Working!</h1><p>Your email notifications are configured correctly.</p><p>Test time: ' + new Date().toLocaleString() + '</p></div>';
-    const result = await sendEmailNotification('🧪 Test Email from Jerry AI', testHtml);
-
-    if (result) {
-      res.json({ success: true, message: '✅ Email sent! Check ' + (process.env.EMAIL_TO || 'firstfinancialcanada@gmail.com') });
-    } else {
-      res.json({ success: false, message: '❌ Email not configured. Add EMAIL_USER and EMAIL_PASSWORD to Railway variables.' });
-    }
+    const result = await sendEmailNotification('🧪 Test Email', '<h1>Email Working!</h1><p>Test: ' + new Date().toLocaleString() + '</p>');
+    res.json({ success: result, message: result ? '✅ Email sent!' : '❌ Not configured' });
   } catch (error) {
     res.json({ success: false, error: error.message });
   }
 });
 
-// ===== CSV EXPORT ENDPOINTS =====
 app.get('/api/export/appointments', async (req, res) => {
   const client = await pool.connect();
   try {
     const result = await client.query('SELECT * FROM appointments ORDER BY created_at DESC');
-    if (result.rows.length === 0) return res.status(404).json({ error: 'No appointments' });
-
     const rows = [['ID', 'Phone', 'Name', 'Vehicle', 'Budget', 'Amount', 'DateTime', 'Created'].join(',')];
-    result.rows.forEach(r => {
-      rows.push([r.id, '"' + r.customer_phone + '"', '"' + (r.customer_name||'') + '"', '"' + (r.vehicle_type||'') + '"', '"' + (r.budget||'') + '"', r.budget_amount||'', '"' + (r.datetime||'') + '"', '"' + r.created_at + '"'].join(','));
-    });
-
+    result.rows.forEach(r => rows.push([r.id, '"' + r.customer_phone + '"', '"' + (r.customer_name||'') + '"', '"' + (r.vehicle_type||'') + '"', '"' + (r.budget||'') + '"', r.budget_amount||'', '"' + (r.datetime||'') + '"', '"' + r.created_at + '"'].join(',')));
     res.setHeader('Content-Type', 'text/csv');
     res.setHeader('Content-Disposition', 'attachment; filename="appointments_' + new Date().toISOString().split('T')[0] + '.csv"');
     res.send(rows.join('\n'));
     console.log('📊 Exported', result.rows.length, 'appointments');
   } catch (e) {
-    res.status(500).json({ error: 'Export failed' });
+    console.error('❌ Export error:', e);
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', 'attachment; filename="appointments_error.csv"');
+    res.send('Error,Message\n"Export Failed","' + e.message + '"');
   } finally {
     client.release();
   }
@@ -1502,19 +1455,17 @@ app.get('/api/export/callbacks', async (req, res) => {
   const client = await pool.connect();
   try {
     const result = await client.query('SELECT * FROM callbacks ORDER BY created_at DESC');
-    if (result.rows.length === 0) return res.status(404).json({ error: 'No callbacks' });
-
     const rows = [['ID', 'Phone', 'Name', 'Vehicle', 'Budget', 'Amount', 'DateTime', 'Created'].join(',')];
-    result.rows.forEach(r => {
-      rows.push([r.id, '"' + r.customer_phone + '"', '"' + (r.customer_name||'') + '"', '"' + (r.vehicle_type||'') + '"', '"' + (r.budget||'') + '"', r.budget_amount||'', '"' + (r.datetime||'') + '"', '"' + r.created_at + '"'].join(','));
-    });
-
+    result.rows.forEach(r => rows.push([r.id, '"' + r.customer_phone + '"', '"' + (r.customer_name||'') + '"', '"' + (r.vehicle_type||'') + '"', '"' + (r.budget||'') + '"', r.budget_amount||'', '"' + (r.datetime||'') + '"', '"' + r.created_at + '"'].join(',')));
     res.setHeader('Content-Type', 'text/csv');
     res.setHeader('Content-Disposition', 'attachment; filename="callbacks_' + new Date().toISOString().split('T')[0] + '.csv"');
     res.send(rows.join('\n'));
     console.log('📊 Exported', result.rows.length, 'callbacks');
   } catch (e) {
-    res.status(500).json({ error: 'Export failed' });
+    console.error('❌ Export error:', e);
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', 'attachment; filename="callbacks_error.csv"');
+    res.send('Error,Message\n"Export Failed","' + e.message + '"');
   } finally {
     client.release();
   }
@@ -1524,19 +1475,17 @@ app.get('/api/export/conversations', async (req, res) => {
   const client = await pool.connect();
   try {
     const result = await client.query('SELECT * FROM conversations ORDER BY started_at DESC');
-    if (result.rows.length === 0) return res.status(404).json({ error: 'No conversations' });
-
     const rows = [['ID', 'Phone', 'Status', 'Name', 'Vehicle', 'Budget', 'Started', 'Updated'].join(',')];
-    result.rows.forEach(r => {
-      rows.push([r.id, '"' + r.customer_phone + '"', '"' + r.status + '"', '"' + (r.customer_name||'') + '"', '"' + (r.vehicle_type||'') + '"', '"' + (r.budget||'') + '"', '"' + r.started_at + '"', '"' + r.updated_at + '"'].join(','));
-    });
-
+    result.rows.forEach(r => rows.push([r.id, '"' + r.customer_phone + '"', '"' + r.status + '"', '"' + (r.customer_name||'') + '"', '"' + (r.vehicle_type||'') + '"', '"' + (r.budget||'') + '"', '"' + r.started_at + '"', '"' + r.updated_at + '"'].join(',')));
     res.setHeader('Content-Type', 'text/csv');
     res.setHeader('Content-Disposition', 'attachment; filename="conversations_' + new Date().toISOString().split('T')[0] + '.csv"');
     res.send(rows.join('\n'));
     console.log('📊 Exported', result.rows.length, 'conversations');
   } catch (e) {
-    res.status(500).json({ error: 'Export failed' });
+    console.error('❌ Export error:', e);
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', 'attachment; filename="conversations_error.csv"');
+    res.send('Error,Message\n"Export Failed","' + e.message + '"');
   } finally {
     client.release();
   }
@@ -1546,24 +1495,21 @@ app.get('/api/export/analytics', async (req, res) => {
   const client = await pool.connect();
   try {
     const result = await client.query('SELECT * FROM analytics ORDER BY timestamp DESC');
-    if (result.rows.length === 0) return res.status(404).json({ error: 'No analytics' });
-
     const rows = [['ID', 'Event', 'Phone', 'Data', 'Timestamp'].join(',')];
-    result.rows.forEach(r => {
-      rows.push([r.id, '"' + r.event_type + '"', '"' + (r.customer_phone||'') + '"', '"' + JSON.stringify(r.data).replace(/"/g, '""') + '"', '"' + r.timestamp + '"'].join(','));
-    });
-
+    result.rows.forEach(r => rows.push([r.id, '"' + r.event_type + '"', '"' + (r.customer_phone||'') + '"', '"' + JSON.stringify(r.data).replace(/"/g, '""') + '"', '"' + r.timestamp + '"'].join(',')));
     res.setHeader('Content-Type', 'text/csv');
     res.setHeader('Content-Disposition', 'attachment; filename="analytics_' + new Date().toISOString().split('T')[0] + '.csv"');
     res.send(rows.join('\n'));
-    console.log('📊 Exported', result.rows.length, 'analytics');
+    console.log('📊 Exported', result.rows.length, 'analytics events');
   } catch (e) {
-    res.status(500).json({ error: 'Export failed' });
+    console.error('❌ Export error:', e);
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', 'attachment; filename="analytics_error.csv"');
+    res.send('Error,Message\n"Export Failed","' + e.message + '"');
   } finally {
     client.release();
   }
 });
-
 
 app.listen(PORT, HOST, () => {
   console.log(`✅ Jerry AI Backend - Database Edition - Port ${PORT}`);
