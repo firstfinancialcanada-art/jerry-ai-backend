@@ -1261,6 +1261,6 @@ app.get('/dashboard', async (req, res) => {
 
 // Start server
 app.listen(PORT, HOST, () => {
-  console.log(\`🚀 Jerry AI Backend running on http://\${HOST}:\${PORT}\`);
-  console.log(\`📊 Dashboard: http://\${HOST}:\${PORT}/dashboard\`);
+  console.log(`🚀 Jerry AI Backend running on http://${HOST}:${PORT}`);
+  console.log(`📊 Dashboard: http://${HOST}:${PORT}/dashboard`);
 });
