@@ -40,15 +40,14 @@ const emailTransporter = nodemailer.createTransport({
   }
 });
 
-// Send email notification function
 async function sendEmailNotification(subject, htmlContent) {
   if (!process.env.EMAIL_USER || !process.env.EMAIL_PASSWORD) {
-    console.log('⚠️  Email not configured - skipping email');
+    console.log('⚠️  Email not configured');
     return false;
   }
   try {
     const info = await emailTransporter.sendMail({
-      from: `"Jerry AI - First Financial" <${process.env.EMAIL_USER}>`,
+      from: '"Jerry AI - First Financial" <' + process.env.EMAIL_USER + '>',
       to: process.env.EMAIL_TO || 'firstfinancialcanada@gmail.com',
       subject: subject,
       html: htmlContent
@@ -61,11 +60,10 @@ async function sendEmailNotification(subject, htmlContent) {
   }
 }
 
-// Format phone number for display
 function formatPhone(phone) {
   const cleaned = phone.replace(/\D/g, '');
   if (cleaned.length === 11 && cleaned.startsWith('1')) {
-    return `+1 (${cleaned.slice(1,4)}) ${cleaned.slice(4,7)}-${cleaned.slice(7)}`;
+    return '+1 (' + cleaned.slice(1,4) + ') ' + cleaned.slice(4,7) + '-' + cleaned.slice(7);
   }
   return phone;
 }
@@ -604,27 +602,21 @@ app.get('/dashboard', async (req, res) => {
 
       <!-- EXPORT DATA SECTION -->
       <div style="max-width: 1200px; margin: 20px auto; background: white; padding: 30px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.1);">
-        <div style="display: flex; align-items: center; margin-bottom: 20px;">
-          <h2 style="margin: 0; color: #2d3748; font-size: 26px; flex: 1;">📊 Export Data to CSV</h2>
-          <span style="background: #edf2f7; padding: 8px 16px; border-radius: 20px; font-size: 14px; color: #4a5568;">Download your business data</span>
-        </div>
-        <p style="color: #718096; margin-bottom: 25px; font-size: 15px;">Export your appointments, callbacks, conversations, and analytics for backup, reporting, or analysis in Excel/Sheets</p>
+        <h2 style="margin: 0 0 10px 0; color: #2d3748; font-size: 26px;">📊 Export Data to CSV</h2>
+        <p style="color: #718096; margin-bottom: 25px;">Download your data for backup or analysis in Excel/Google Sheets</p>
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
-          <a href="/api/export/appointments" download style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; padding: 18px 24px; border-radius: 10px; text-decoration: none; font-weight: bold; font-size: 15px; display: flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 4px 6px rgba(16, 185, 129, 0.3); transition: all 0.3s;" onmouseover="this.style.transform='translateY(-3px)'; this.style.boxShadow='0 6px 12px rgba(16, 185, 129, 0.4)'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 6px rgba(16, 185, 129, 0.3)'">
-            <span style="font-size: 20px;">📅</span> Appointments
+          <a href="/api/export/appointments" download style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; padding: 18px; border-radius: 10px; text-decoration: none; font-weight: bold; text-align: center; box-shadow: 0 4px 6px rgba(16,185,129,0.3); transition: all 0.3s;" onmouseover="this.style.transform='translateY(-3px)'" onmouseout="this.style.transform='translateY(0)'">
+            📅 Appointments
           </a>
-          <a href="/api/export/callbacks" download style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: white; padding: 18px 24px; border-radius: 10px; text-decoration: none; font-weight: bold; font-size: 15px; display: flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 4px 6px rgba(245, 158, 11, 0.3); transition: all 0.3s;" onmouseover="this.style.transform='translateY(-3px)'; this.style.boxShadow='0 6px 12px rgba(245, 158, 11, 0.4)'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 6px rgba(245, 158, 11, 0.3)'">
-            <span style="font-size: 20px;">📞</span> Callbacks
+          <a href="/api/export/callbacks" download style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: white; padding: 18px; border-radius: 10px; text-decoration: none; font-weight: bold; text-align: center; box-shadow: 0 4px 6px rgba(245,158,11,0.3); transition: all 0.3s;" onmouseover="this.style.transform='translateY(-3px)'" onmouseout="this.style.transform='translateY(0)'">
+            📞 Callbacks
           </a>
-          <a href="/api/export/conversations" download style="background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); color: white; padding: 18px 24px; border-radius: 10px; text-decoration: none; font-weight: bold; font-size: 15px; display: flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 4px 6px rgba(59, 130, 246, 0.3); transition: all 0.3s;" onmouseover="this.style.transform='translateY(-3px)'; this.style.boxShadow='0 6px 12px rgba(59, 130, 246, 0.4)'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 6px rgba(59, 130, 246, 0.3)'">
-            <span style="font-size: 20px;">💬</span> Conversations
+          <a href="/api/export/conversations" download style="background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); color: white; padding: 18px; border-radius: 10px; text-decoration: none; font-weight: bold; text-align: center; box-shadow: 0 4px 6px rgba(59,130,246,0.3); transition: all 0.3s;" onmouseover="this.style.transform='translateY(-3px)'" onmouseout="this.style.transform='translateY(0)'">
+            💬 Conversations
           </a>
-          <a href="/api/export/analytics" download style="background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%); color: white; padding: 18px 24px; border-radius: 10px; text-decoration: none; font-weight: bold; font-size: 15px; display: flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 4px 6px rgba(139, 92, 246, 0.3); transition: all 0.3s;" onmouseover="this.style.transform='translateY(-3px)'; this.style.boxShadow='0 6px 12px rgba(139, 92, 246, 0.4)'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 6px rgba(139, 92, 246, 0.3)'">
-            <span style="font-size: 20px;">📈</span> Analytics
+          <a href="/api/export/analytics" download style="background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%); color: white; padding: 18px; border-radius: 10px; text-decoration: none; font-weight: bold; text-align: center; box-shadow: 0 4px 6px rgba(139,92,246,0.3); transition: all 0.3s;" onmouseover="this.style.transform='translateY(-3px)'" onmouseout="this.style.transform='translateY(0)'">
+            📈 Analytics
           </a>
-        </div>
-        <div style="margin-top: 20px; padding: 15px; background: #f0fdf4; border-left: 4px solid #10b981; border-radius: 6px;">
-          <p style="margin: 0; color: #065f46; font-size: 13px; display: flex; align-items: center; gap: 8px;"><strong>💡 Tip:</strong> CSV files open in Excel, Google Sheets, and most spreadsheet applications</p>
         </div>
       </div>
 
@@ -1213,10 +1205,13 @@ app.post('/api/sms-webhook', async (req, res) => {
 
     // 📧 Email notification for new customer message
     try {
-      const emailHtml = `<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;"><div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 20px; border-radius: 10px 10px 0 0;"><h1 style="color: white; margin: 0; font-size: 24px;">🚨 New Customer Message</h1></div><div style="background: #f7fafc; padding: 25px; border-radius: 0 0 10px 10px;"><table style="width: 100%; border-collapse: collapse;"><tr><td style="padding: 12px; border-bottom: 1px solid #e2e8f0; font-weight: bold; color: #2d3748;">Phone:</td><td style="padding: 12px; border-bottom: 1px solid #e2e8f0; color: #4a5568;">${formatPhone(phone)}</td></tr><tr><td style="padding: 12px; border-bottom: 1px solid #e2e8f0; font-weight: bold; color: #2d3748;">Name:</td><td style="padding: 12px; border-bottom: 1px solid #e2e8f0; color: #4a5568;">${conversation.customer_name || 'Not provided yet'}</td></tr><tr><td style="padding: 12px; border-bottom: 1px solid #e2e8f0; font-weight: bold; color: #2d3748;">Vehicle Interest:</td><td style="padding: 12px; border-bottom: 1px solid #e2e8f0; color: #4a5568;">${conversation.vehicle_type || 'Not provided yet'}</td></tr><tr><td style="padding: 12px; font-weight: bold; color: #2d3748;">Message:</td><td style="padding: 12px; color: #2d3748; font-weight: 600;">${message}</td></tr></table><div style="margin-top: 20px; padding: 15px; background: #edf2f7; border-left: 4px solid #667eea; border-radius: 4px;"><p style="margin: 0; color: #2d3748; font-size: 14px;">💬 Reply via your dashboard or text back directly</p></div><p style="color: #a0aec0; font-size: 12px; text-align: center; margin-top: 20px;">${new Date().toLocaleString('en-US', { timeZone: 'America/Edmonton' })} MST</p></div></div>`;
-      await sendEmailNotification(\`🚨 New Message from \${conversation.customer_name || formatPhone(phone)}\`, emailHtml);
+      const customerName = conversation.customer_name || 'Not provided';
+      const vehicleInfo = conversation.vehicle_type || 'Not provided yet';
+      const emailSubject = '🚨 New Message from ' + (conversation.customer_name || formatPhone(phone));
+      const emailBody = '<div style="font-family: Arial; max-width: 600px;"><div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 20px; border-radius: 10px 10px 0 0;"><h1 style="color: white; margin: 0;">🚨 New Customer Message</h1></div><div style="background: #f7fafc; padding: 25px; border-radius: 0 0 10px 10px;"><table style="width: 100%;"><tr><td style="padding: 12px; font-weight: bold;">Phone:</td><td style="padding: 12px;">' + formatPhone(phone) + '</td></tr><tr><td style="padding: 12px; font-weight: bold;">Name:</td><td style="padding: 12px;">' + customerName + '</td></tr><tr><td style="padding: 12px; font-weight: bold;">Vehicle Interest:</td><td style="padding: 12px;">' + vehicleInfo + '</td></tr><tr><td style="padding: 12px; font-weight: bold;">Message:</td><td style="padding: 12px; font-weight: 600;">' + message + '</td></tr></table><p style="color: #718096; font-size: 12px; text-align: center; margin-top: 20px;">' + new Date().toLocaleString() + '</p></div></div>';
+      await sendEmailNotification(emailSubject, emailBody);
     } catch (err) { 
-      console.error('Email notification error:', err); 
+      console.error('Email error:', err); 
     }
 
     await touchConversation(conversation.id);
@@ -1427,12 +1422,13 @@ async function getJerryResponse(phone, message, conversation) {
     if (conversation.intent === 'test_drive') {
       await saveAppointment(appointmentData);
 
-      // 📧 Email notification for appointment booking
+      // 📧 Email for appointment
       try {
-        const apptEmail = `<div style="font-family: Arial, sans-serif; max-width: 600px;"><div style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); padding: 20px; border-radius: 10px 10px 0 0;"><h1 style="color: white; margin: 0; font-size: 24px;">📅 New Appointment Booked!</h1></div><div style="background: #f7fafc; padding: 25px; border-radius: 0 0 10px 10px;"><table style="width: 100%; border-collapse: collapse;"><tr><td style="padding: 12px; border-bottom: 1px solid #e2e8f0; font-weight: bold; color: #2d3748;">Customer:</td><td style="padding: 12px; border-bottom: 1px solid #e2e8f0; color: #4a5568;">${conversation.customer_name}</td></tr><tr><td style="padding: 12px; border-bottom: 1px solid #e2e8f0; font-weight: bold; color: #2d3748;">Phone:</td><td style="padding: 12px; border-bottom: 1px solid #e2e8f0; color: #4a5568;">${formatPhone(phone)}</td></tr><tr><td style="padding: 12px; border-bottom: 1px solid #e2e8f0; font-weight: bold; color: #2d3748;">Vehicle:</td><td style="padding: 12px; border-bottom: 1px solid #e2e8f0; color: #4a5568;">${conversation.vehicle_type || 'Not specified'}</td></tr><tr><td style="padding: 12px; border-bottom: 1px solid #e2e8f0; font-weight: bold; color: #2d3748;">Budget:</td><td style="padding: 12px; border-bottom: 1px solid #e2e8f0; color: #4a5568;">${conversation.budget || 'Not specified'}</td></tr><tr><td style="padding: 12px; font-weight: bold; color: #2d3748;">Date/Time:</td><td style="padding: 12px; color: #10b981; font-weight: 600; font-size: 16px;">${message}</td></tr></table><div style="margin-top: 20px; padding: 15px; background: #d1fae5; border-left: 4px solid #10b981; border-radius: 4px;"><p style="margin: 0; color: #065f46; font-weight: bold;">✅ Customer is coming for a test drive!</p></div></div></div>`;
-        await sendEmailNotification('📅 Test Drive: ' + conversation.customer_name, apptEmail);
+        const apptSubject = '📅 Test Drive: ' + conversation.customer_name;
+        const apptBody = '<div style="font-family: Arial; max-width: 600px;"><div style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); padding: 20px; border-radius: 10px 10px 0 0;"><h1 style="color: white; margin: 0;">📅 New Appointment!</h1></div><div style="background: #f7fafc; padding: 25px; border-radius: 0 0 10px 10px;"><table style="width: 100%;"><tr><td style="padding: 12px; font-weight: bold;">Customer:</td><td style="padding: 12px;">' + conversation.customer_name + '</td></tr><tr><td style="padding: 12px; font-weight: bold;">Phone:</td><td style="padding: 12px;">' + formatPhone(phone) + '</td></tr><tr><td style="padding: 12px; font-weight: bold;">Vehicle:</td><td style="padding: 12px;">' + (conversation.vehicle_type || 'Not specified') + '</td></tr><tr><td style="padding: 12px; font-weight: bold;">Date/Time:</td><td style="padding: 12px; color: #10b981; font-weight: 600;">' + message + '</td></tr></table><div style="margin-top: 20px; padding: 15px; background: #d1fae5; border-radius: 4px;"><p style="margin: 0; color: #065f46; font-weight: bold;">✅ Customer is coming for a test drive!</p></div></div></div>';
+        await sendEmailNotification(apptSubject, apptBody);
       } catch (e) { 
-        console.error('Appointment email error:', e); 
+        console.error('Appt email error:', e); 
       }
 
       await logAnalytics('appointment_booked', phone, appointmentData);
@@ -1440,10 +1436,11 @@ async function getJerryResponse(phone, message, conversation) {
     } else {
       await saveCallback(appointmentData);
 
-      // 📧 Email notification for callback request
+      // 📧 Email for callback
       try {
-        const callbackEmail = `<div style="font-family: Arial, sans-serif; max-width: 600px;"><div style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); padding: 20px; border-radius: 10px 10px 0 0;"><h1 style="color: white; margin: 0; font-size: 24px;">📞 Callback Requested!</h1></div><div style="background: #f7fafc; padding: 25px; border-radius: 0 0 10px 10px;"><table style="width: 100%; border-collapse: collapse;"><tr><td style="padding: 12px; border-bottom: 1px solid #e2e8f0; font-weight: bold; color: #2d3748;">Customer:</td><td style="padding: 12px; border-bottom: 1px solid #e2e8f0; color: #4a5568;">${conversation.customer_name}</td></tr><tr><td style="padding: 12px; border-bottom: 1px solid #e2e8f0; font-weight: bold; color: #2d3748;">Phone:</td><td style="padding: 12px; border-bottom: 1px solid #e2e8f0; color: #4a5568;">${formatPhone(phone)}</td></tr><tr><td style="padding: 12px; border-bottom: 1px solid #e2e8f0; font-weight: bold; color: #2d3748;">Vehicle:</td><td style="padding: 12px; border-bottom: 1px solid #e2e8f0; color: #4a5568;">${conversation.vehicle_type || 'Not specified'}</td></tr><tr><td style="padding: 12px; border-bottom: 1px solid #e2e8f0; font-weight: bold; color: #2d3748;">Budget:</td><td style="padding: 12px; border-bottom: 1px solid #e2e8f0; color: #4a5568;">${conversation.budget || 'Not specified'}</td></tr><tr><td style="padding: 12px; font-weight: bold; color: #2d3748;">Preferred Time:</td><td style="padding: 12px; color: #f59e0b; font-weight: 600; font-size: 16px;">${message}</td></tr></table><div style="margin-top: 20px; padding: 15px; background: #fef3c7; border-left: 4px solid #f59e0b; border-radius: 4px;"><p style="margin: 0; color: #92400e; font-weight: bold;">⚠️ Customer waiting for your call!</p></div></div></div>`;
-        await sendEmailNotification('📞 Callback: ' + conversation.customer_name, callbackEmail);
+        const cbSubject = '📞 Callback: ' + conversation.customer_name;
+        const cbBody = '<div style="font-family: Arial; max-width: 600px;"><div style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); padding: 20px; border-radius: 10px 10px 0 0;"><h1 style="color: white; margin: 0;">📞 Callback Requested!</h1></div><div style="background: #f7fafc; padding: 25px; border-radius: 0 0 10px 10px;"><table style="width: 100%;"><tr><td style="padding: 12px; font-weight: bold;">Customer:</td><td style="padding: 12px;">' + conversation.customer_name + '</td></tr><tr><td style="padding: 12px; font-weight: bold;">Phone:</td><td style="padding: 12px;">' + formatPhone(phone) + '</td></tr><tr><td style="padding: 12px; font-weight: bold;">Vehicle:</td><td style="padding: 12px;">' + (conversation.vehicle_type || 'Not specified') + '</td></tr><tr><td style="padding: 12px; font-weight: bold;">Preferred Time:</td><td style="padding: 12px; color: #f59e0b; font-weight: 600;">' + message + '</td></tr></table><div style="margin-top: 20px; padding: 15px; background: #fef3c7; border-radius: 4px;"><p style="margin: 0; color: #92400e; font-weight: bold;">⚠️ Customer waiting for your call!</p></div></div></div>';
+        await sendEmailNotification(cbSubject, cbBody);
       } catch (e) { 
         console.error('Callback email error:', e); 
       }
@@ -1464,27 +1461,14 @@ async function getJerryResponse(phone, message, conversation) {
 // ===== EMAIL TEST ENDPOINT =====
 app.get('/test-email', async (req, res) => {
   try {
-    console.log('🧪 Testing email configuration...');
-    console.log('EMAIL_USER:', process.env.EMAIL_USER ? '✅ Configured' : '❌ Missing');
-    console.log('EMAIL_PASSWORD:', process.env.EMAIL_PASSWORD ? '✅ Configured' : '❌ Missing');
-
-    const result = await sendEmailNotification(
-      '🧪 Test Email from Jerry AI',
-      `<div style="font-family: Arial; padding: 20px; max-width: 600px; margin: 0 auto;"><div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 25px; border-radius: 12px 12px 0 0;"><h1 style="color: white; margin: 0;">✅ Email System Working!</h1></div><div style="background: #f7fafc; padding: 25px; border-radius: 0 0 12px 12px;"><p style="font-size: 18px; color: #2d3748; font-weight: 600;">Success! Your email notifications are configured correctly.</p><p style="color: #4a5568; font-size: 14px;">You will receive emails for:</p><ul style="color: #4a5568;"><li>New customer messages</li><li>Appointment bookings</li><li>Callback requests</li></ul><p style="color: #718096; font-size: 12px; margin-top: 20px; text-align: center;">Test performed at: ${new Date().toLocaleString('en-US', { timeZone: 'America/Edmonton' })} MST</p></div></div>`
-    );
+    console.log('🧪 Testing email...');
+    const testHtml = '<div style="font-family: Arial; padding: 20px;"><h1 style="color: #667eea;">✅ Email Working!</h1><p>Your email notifications are configured correctly.</p><p>Test time: ' + new Date().toLocaleString() + '</p></div>';
+    const result = await sendEmailNotification('🧪 Test Email from Jerry AI', testHtml);
 
     if (result) {
-      res.json({ 
-        success: true, 
-        message: '✅ Test email sent successfully! Check ' + (process.env.EMAIL_TO || 'firstfinancialcanada@gmail.com'),
-        timestamp: new Date().toISOString()
-      });
+      res.json({ success: true, message: '✅ Email sent! Check ' + (process.env.EMAIL_TO || 'firstfinancialcanada@gmail.com') });
     } else {
-      res.json({ 
-        success: false, 
-        message: '❌ Email not configured. Add EMAIL_USER and EMAIL_PASSWORD to environment variables.',
-        help: 'Check Railway dashboard > Variables tab'
-      });
+      res.json({ success: false, message: '❌ Email not configured. Add EMAIL_USER and EMAIL_PASSWORD to Railway variables.' });
     }
   } catch (error) {
     res.json({ success: false, error: error.message });
@@ -1496,31 +1480,18 @@ app.get('/api/export/appointments', async (req, res) => {
   const client = await pool.connect();
   try {
     const result = await client.query('SELECT * FROM appointments ORDER BY created_at DESC');
-    if (result.rows.length === 0) return res.status(404).json({ error: 'No appointments found' });
+    if (result.rows.length === 0) return res.status(404).json({ error: 'No appointments' });
 
-    const headers = ['ID', 'Phone', 'Customer Name', 'Vehicle Type', 'Budget', 'Budget Amount', 'Date/Time', 'Created At', 'Status'];
-    const rows = [headers.join(',')];
-
+    const rows = [['ID', 'Phone', 'Name', 'Vehicle', 'Budget', 'Amount', 'DateTime', 'Created'].join(',')];
     result.rows.forEach(r => {
-      rows.push([
-        r.id,
-        `"${r.customer_phone}"`,
-        `"${r.customer_name || ''}"`,
-        `"${r.vehicle_type || ''}"`,
-        `"${r.budget || ''}"`,
-        r.budget_amount || '',
-        `"${r.datetime || ''}"`,
-        `"${r.created_at}"`,
-        `"${r.status || 'pending'}"`
-      ].join(','));
+      rows.push([r.id, '"' + r.customer_phone + '"', '"' + (r.customer_name||'') + '"', '"' + (r.vehicle_type||'') + '"', '"' + (r.budget||'') + '"', r.budget_amount||'', '"' + (r.datetime||'') + '"', '"' + r.created_at + '"'].join(','));
     });
 
     res.setHeader('Content-Type', 'text/csv');
-    res.setHeader('Content-Disposition', `attachment; filename="appointments_${new Date().toISOString().split('T')[0]}.csv"`);
+    res.setHeader('Content-Disposition', 'attachment; filename="appointments_' + new Date().toISOString().split('T')[0] + '.csv"');
     res.send(rows.join('\n'));
     console.log('📊 Exported', result.rows.length, 'appointments');
   } catch (e) {
-    console.error('Export error:', e);
     res.status(500).json({ error: 'Export failed' });
   } finally {
     client.release();
@@ -1531,31 +1502,18 @@ app.get('/api/export/callbacks', async (req, res) => {
   const client = await pool.connect();
   try {
     const result = await client.query('SELECT * FROM callbacks ORDER BY created_at DESC');
-    if (result.rows.length === 0) return res.status(404).json({ error: 'No callbacks found' });
+    if (result.rows.length === 0) return res.status(404).json({ error: 'No callbacks' });
 
-    const headers = ['ID', 'Phone', 'Customer Name', 'Vehicle Type', 'Budget', 'Budget Amount', 'Date/Time', 'Created At', 'Status'];
-    const rows = [headers.join(',')];
-
+    const rows = [['ID', 'Phone', 'Name', 'Vehicle', 'Budget', 'Amount', 'DateTime', 'Created'].join(',')];
     result.rows.forEach(r => {
-      rows.push([
-        r.id,
-        `"${r.customer_phone}"`,
-        `"${r.customer_name || ''}"`,
-        `"${r.vehicle_type || ''}"`,
-        `"${r.budget || ''}"`,
-        r.budget_amount || '',
-        `"${r.datetime || ''}"`,
-        `"${r.created_at}"`,
-        `"${r.status || 'pending'}"`
-      ].join(','));
+      rows.push([r.id, '"' + r.customer_phone + '"', '"' + (r.customer_name||'') + '"', '"' + (r.vehicle_type||'') + '"', '"' + (r.budget||'') + '"', r.budget_amount||'', '"' + (r.datetime||'') + '"', '"' + r.created_at + '"'].join(','));
     });
 
     res.setHeader('Content-Type', 'text/csv');
-    res.setHeader('Content-Disposition', `attachment; filename="callbacks_${new Date().toISOString().split('T')[0]}.csv"`);
+    res.setHeader('Content-Disposition', 'attachment; filename="callbacks_' + new Date().toISOString().split('T')[0] + '.csv"');
     res.send(rows.join('\n'));
     console.log('📊 Exported', result.rows.length, 'callbacks');
   } catch (e) {
-    console.error('Export error:', e);
     res.status(500).json({ error: 'Export failed' });
   } finally {
     client.release();
@@ -1566,31 +1524,18 @@ app.get('/api/export/conversations', async (req, res) => {
   const client = await pool.connect();
   try {
     const result = await client.query('SELECT * FROM conversations ORDER BY started_at DESC');
-    if (result.rows.length === 0) return res.status(404).json({ error: 'No conversations found' });
+    if (result.rows.length === 0) return res.status(404).json({ error: 'No conversations' });
 
-    const headers = ['ID', 'Phone', 'Status', 'Customer Name', 'Vehicle Type', 'Budget', 'Budget Amount', 'Started At', 'Updated At'];
-    const rows = [headers.join(',')];
-
+    const rows = [['ID', 'Phone', 'Status', 'Name', 'Vehicle', 'Budget', 'Started', 'Updated'].join(',')];
     result.rows.forEach(r => {
-      rows.push([
-        r.id,
-        `"${r.customer_phone}"`,
-        `"${r.status}"`,
-        `"${r.customer_name || ''}"`,
-        `"${r.vehicle_type || ''}"`,
-        `"${r.budget || ''}"`,
-        r.budget_amount || '',
-        `"${r.started_at}"`,
-        `"${r.updated_at}"`
-      ].join(','));
+      rows.push([r.id, '"' + r.customer_phone + '"', '"' + r.status + '"', '"' + (r.customer_name||'') + '"', '"' + (r.vehicle_type||'') + '"', '"' + (r.budget||'') + '"', '"' + r.started_at + '"', '"' + r.updated_at + '"'].join(','));
     });
 
     res.setHeader('Content-Type', 'text/csv');
-    res.setHeader('Content-Disposition', `attachment; filename="conversations_${new Date().toISOString().split('T')[0]}.csv"`);
+    res.setHeader('Content-Disposition', 'attachment; filename="conversations_' + new Date().toISOString().split('T')[0] + '.csv"');
     res.send(rows.join('\n'));
     console.log('📊 Exported', result.rows.length, 'conversations');
   } catch (e) {
-    console.error('Export error:', e);
     res.status(500).json({ error: 'Export failed' });
   } finally {
     client.release();
@@ -1601,27 +1546,18 @@ app.get('/api/export/analytics', async (req, res) => {
   const client = await pool.connect();
   try {
     const result = await client.query('SELECT * FROM analytics ORDER BY timestamp DESC');
-    if (result.rows.length === 0) return res.status(404).json({ error: 'No analytics found' });
+    if (result.rows.length === 0) return res.status(404).json({ error: 'No analytics' });
 
-    const headers = ['ID', 'Event Type', 'Customer Phone', 'Data', 'Timestamp'];
-    const rows = [headers.join(',')];
-
+    const rows = [['ID', 'Event', 'Phone', 'Data', 'Timestamp'].join(',')];
     result.rows.forEach(r => {
-      rows.push([
-        r.id,
-        `"${r.event_type}"`,
-        `"${r.customer_phone || ''}"`,
-        `"${JSON.stringify(r.data).replace(/"/g, '""')}"`,
-        `"${r.timestamp}"`
-      ].join(','));
+      rows.push([r.id, '"' + r.event_type + '"', '"' + (r.customer_phone||'') + '"', '"' + JSON.stringify(r.data).replace(/"/g, '""') + '"', '"' + r.timestamp + '"'].join(','));
     });
 
     res.setHeader('Content-Type', 'text/csv');
-    res.setHeader('Content-Disposition', `attachment; filename="analytics_${new Date().toISOString().split('T')[0]}.csv"`);
+    res.setHeader('Content-Disposition', 'attachment; filename="analytics_' + new Date().toISOString().split('T')[0] + '.csv"');
     res.send(rows.join('\n'));
-    console.log('📊 Exported', result.rows.length, 'analytics events');
+    console.log('📊 Exported', result.rows.length, 'analytics');
   } catch (e) {
-    console.error('Export error:', e);
     res.status(500).json({ error: 'Export failed' });
   } finally {
     client.release();
