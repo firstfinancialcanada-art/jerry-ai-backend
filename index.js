@@ -1330,16 +1330,24 @@ app.post('/api/sms-webhook', async (req, res) => {
     
     await saveMessage(conversation.id, phone, 'assistant', aiResponse);
     
-    const twiml = new twilio.twiml.MessagingResponse();
-    twiml.message(aiResponse);
+     // ✅ CHANGE: Use Twilio client instead of TwiML
+    const accountSid = process.env.TWILIO_ACCOUNT_SID;
+    const authToken = process.env.TWILIO_AUTH_TOKEN;
+    const fromNumber = process.env.TWILIO_PHONE_NUMBER;
+    const client = twilio(accountSid, authToken);
+    
+    await client.messages.create({
+      body: aiResponse,
+      from: fromNumber,
+      to: phone
+    });
     
     console.log('✅ Jerry replied:', aiResponse);
-    res.type('text/xml').send(twiml.toString());
+    res.type('text/xml').send('<Response></Response>');
   } catch (error) {
     console.error('❌ Webhook error:', error);
-    const twiml = new twilio.twiml.MessagingResponse();
-    twiml.message("I'm having trouble right now. Please call us at (403) 555-0100!");
-    res.type('text/xml').send(twiml.toString());
+        res.type('text/xml').send('<Response></Response>');
+
   }
 });
 
