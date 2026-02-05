@@ -183,16 +183,22 @@ async function deleteConversation(phone) {
     if (conversation.rows.length > 0) {
       const conversationId = conversation.rows[0].id;
       
+      // Delete from all related tables
       await client.query('DELETE FROM messages WHERE conversation_id = $1', [conversationId]);
+      await client.query('DELETE FROM appointments WHERE customer_phone = $1', [phone]);
+      await client.query('DELETE FROM callbacks WHERE customer_phone = $1', [phone]);
       await client.query('DELETE FROM conversations WHERE id = $1', [conversationId]);
       
-      console.log('🗑️ Conversation deleted:', phone);
+      console.log('🗑️ Conversation deleted (with appointments & callbacks):', phone);
       return true;
     }
     
     return false;
   } finally {
     client.release();
+  }
+}
+
   }
 }
 
