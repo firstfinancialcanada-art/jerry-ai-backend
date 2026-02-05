@@ -941,7 +941,7 @@ app.get('/dashboard', async (req, res) => {
     }
     
     
-    function filterConversations() {
+       function filterConversations() {
       const searchBox = document.getElementById('searchBox');
       const searchTerm = searchBox.value.toLowerCase().replace(/[^0-9a-z]/g, '');
       const conversationItems = document.querySelectorAll('.conversation-item');
@@ -981,42 +981,6 @@ app.get('/dashboard', async (req, res) => {
       const details = document.getElementById('cb-details-' + id);
       const icon = document.getElementById('cb-icon-' + id);
       if (details && icon) {
-      // ⭐ ADD THESE TWO FUNCTIONS HERE ⭐
-
-// Frontend delete appointment - calls your existing backend API
-async function deleteAppointment(aptId) {
-  if (!confirm('Delete this appointment?')) return;
-  try {
-    const response = await fetch(`/api/appointment/${aptId}`, { method: 'DELETE' });
-    const data = await response.json();
-    if (data.success) {
-      showNotification('✅ Appointment deleted!');
-      loadDashboard();  // Refresh dashboard
-    } else {
-      alert('Delete failed: ' + (data.error || 'Unknown error'));
-    }
-  } catch (error) {
-    alert('Error: ' + error.message);
-  }
-}
-
-// Frontend delete callback - calls your existing backend API
-async function deleteCallback(cbId) {
-  if (!confirm('Delete this callback?')) return;
-  try {
-    const response = await fetch(`/api/callback/${cbId}`, { method: 'DELETE' });
-    const data = await response.json();
-    if (data.success) {
-      showNotification('✅ Callback deleted!');
-      loadDashboard();  // Refresh dashboard
-    } else {
-      alert('Delete failed: ' + (data.error || 'Unknown error'));
-    }
-  } catch (error) {
-    alert('Error: ' + error.message);
-  }
-}
-
         if (details.classList.contains('visible')) {
           details.classList.remove('visible');
           icon.classList.remove('expanded');
@@ -1024,6 +988,38 @@ async function deleteCallback(cbId) {
           details.classList.add('visible');
           icon.classList.add('expanded');
         }
+      }
+    }
+
+    async function deleteAppointment(aptId) {
+      if (!confirm('Delete this appointment?')) return;
+      try {
+        const response = await fetch(`/api/appointment/${aptId}`, { method: 'DELETE' });
+        const data = await response.json();
+        if (data.success) {
+          alert('✅ Appointment deleted!');
+          loadDashboard();
+        } else {
+          alert('Delete failed: ' + (data.error || 'Unknown error'));
+        }
+      } catch (error) {
+        alert('Error: ' + error.message);
+      }
+    }
+
+    async function deleteCallback(cbId) {
+      if (!confirm('Delete this callback?')) return;
+      try {
+        const response = await fetch(`/api/callback/${cbId}`, { method: 'DELETE' });
+        const data = await response.json();
+        if (data.success) {
+          alert('✅ Callback deleted!');
+          loadDashboard();
+        } else {
+          alert('Delete failed: ' + (data.error || 'Unknown error'));
+        }
+      } catch (error) {
+        alert('Error: ' + error.message);
       }
     }
 
