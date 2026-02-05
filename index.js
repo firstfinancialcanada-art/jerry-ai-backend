@@ -1285,8 +1285,13 @@ app.post('/api/start-sms', async (req, res) => {
     const messageBody = message || "Hi! 👋 I'm Jerry from the dealership. I wanted to reach out and see if you're interested in finding your perfect vehicle. What type of car are you looking for? (Reply STOP to opt out)";
     
     await getOrCreateCustomer(phone);
-    await getOrCreateConversation(phone);
-    await logAnalytics('sms_sent', phone, { source: 'manual_campaign', message: messageBody });
+const conversation = await getOrCreateConversation(phone);
+
+// Save the outgoing message to database so it appears in Recent Messages
+await saveMessage(conversation.id, phone, 'assistant', messageBody);
+
+await logAnalytics('sms_sent', phone
+
     
     const accountSid = process.env.TWILIO_ACCOUNT_SID;
     const authToken = process.env.TWILIO_AUTH_TOKEN;
