@@ -199,9 +199,6 @@ async function deleteConversation(phone) {
   }
 }
 
-  }
-}
-
 // Save message to database
 async function saveMessage(conversationId, phone, role, content) {
   const client = await pool.connect();
