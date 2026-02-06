@@ -802,7 +802,7 @@ app.get('/dashboard', async (req, res) => {
   
   <script>
     document.getElementById('phoneNumber').addEventListener('input', function(e) {
-      let value = e.target.value.replace(/\\D/g, '');
+      let value = e.target.value.replace(/[^0-9]/g, '');
       
       if (value.length > 0 && !value.startsWith('1')) {
         value = '1' + value;
@@ -828,7 +828,7 @@ app.get('/dashboard', async (req, res) => {
     async function sendSMS(event) {
       event.preventDefault();
       
-      const phoneNumber = document.getElementById('phoneNumber').value.replace(/\\D/g, '');
+      const phoneNumber = document.getElementById('phoneNumber').value.replace(/[^0-9]/g, '');
       const fullPhone = phoneNumber.startsWith('1') ? '+' + phoneNumber : '+1' + phoneNumber;
       const customMessage = document.getElementById('message').value;
       const sendBtn = document.getElementById('sendBtn');
@@ -1085,23 +1085,23 @@ if (uniqueConvArray.length === 0) {
 conversationList.innerHTML = uniqueConvArray.map(conv => `
   <div class="conversation-item">
     <div class="conversation-header">
-      <div class="conversation-info" onclick="viewConversation('\${conv.customer_phone}', this)">
+      <div class="conversation-info" onclick="viewConversation('${conv.customer_phone}', this)">
         <div>
-          <span class="phone">\${conv.customer_phone}</span>
-          <span class="name">\${conv.customer_name || 'Unknown'}</span>
-          <span class="badge badge-\${conv.status}">\${conv.status}</span>
+          <span class="phone">${conv.customer_phone}</span>
+          <span class="name">${conv.customer_name || 'Unknown'}</span>
+          <span class="badge badge-${conv.status}">${conv.status}</span>
                   </div>
                   <div class="info">
-                    \${conv.vehicle_type || 'No vehicle selected'} • 
-                    \${conv.budget || 'No budget set'} • 
-                    Stage: \${conv.stage} •
-                    \${conv.message_count} messages
+                    ${conv.vehicle_type || 'No vehicle selected'} • 
+                    ${conv.budget || 'No budget set'} • 
+                    Stage: ${conv.stage} •
+                    ${conv.message_count} messages
                   </div>
-                  <div class="info">Started: \${new Date(conv.started_at).toLocaleString()}</div>
+                  <div class="info">Started: ${new Date(conv.started_at).toLocaleString()}</div>
                 </div>
-                <button class="btn-delete" onclick="deleteConversation('\${conv.customer_phone}', event)" title="Delete conversation">×</button>
+                <button class="btn-delete" onclick="deleteConversation('${conv.customer_phone}', event)" title="Delete conversation">×</button>
               </div>
-              <div class="messages-container" id="messages-\${conv.customer_phone.replace(/[^0-9]/g, '')}"></div>
+              <div class="messages-container" id="messages-${conv.customer_phone.replace(/[^0-9]/g, '')}"></div>
             </div>
                     `).join('');
         }
@@ -1113,20 +1113,20 @@ conversationList.innerHTML = uniqueConvArray.map(conv => `
           appointmentsList.innerHTML = statsData.recentAppointments.map(apt => \`
             <div class="appointment-card">
               <div class="card-header">
-                <div style="flex: 1;" onclick="toggleAppointment(\${apt.id})">
-                  <div class="card-title">🚗 \${apt.customer_name} - \${apt.vehicle_type}</div>
-                  <div class="card-preview">📞 \${apt.customer_phone} • 📅 \${apt.datetime}</div>
+                <div style="flex: 1;" onclick="toggleAppointment(${apt.id})">
+                  <div class="card-title">🚗 ${apt.customer_name} - ${apt.vehicle_type}</div>
+                  <div class="card-preview">📞 ${apt.customer_phone} • 📅 ${apt.datetime}</div>
                 </div>
-                <button class="btn-delete-small" onclick="event.stopPropagation(); deleteAppointment(\${apt.id})">🗑️ Delete</button>
-<span class="expand-icon" id="apt-icon-\${apt.id}" onclick="toggleAppointment(\${apt.id})">▼</span>
+                <button class="btn-delete-small" onclick="event.stopPropagation(); deleteAppointment(${apt.id})">🗑️ Delete</button>
+<span class="expand-icon" id="apt-icon-${apt.id}" onclick="toggleAppointment(${apt.id})">▼</span>
               </div>
-              <div class="card-details" id="apt-details-\${apt.id}">
-                <div class="detail-row"><span class="detail-label">Customer Name:</span><span class="detail-value">\${apt.customer_name}</span></div>
-                <div class="detail-row"><span class="detail-label">Phone Number:</span><span class="detail-value">\${apt.customer_phone}</span></div>
-                <div class="detail-row"><span class="detail-label">Vehicle Type:</span><span class="detail-value">\${apt.vehicle_type}</span></div>
-                <div class="detail-row"><span class="detail-label">Budget:</span><span class="detail-value">\${apt.budget}\${apt.budget_amount ? ' ($' + apt.budget_amount.toLocaleString() + ')' : ''}</span></div>
-                <div class="detail-row"><span class="detail-label">Appointment Date/Time:</span><span class="detail-value">\${apt.datetime}</span></div>
-                <div class="detail-row"><span class="detail-label">Booked On:</span><span class="detail-value">\${new Date(apt.created_at).toLocaleString()}</span></div>
+              <div class="card-details" id="apt-details-${apt.id}">
+                <div class="detail-row"><span class="detail-label">Customer Name:</span><span class="detail-value">${apt.customer_name}</span></div>
+                <div class="detail-row"><span class="detail-label">Phone Number:</span><span class="detail-value">${apt.customer_phone}</span></div>
+                <div class="detail-row"><span class="detail-label">Vehicle Type:</span><span class="detail-value">${apt.vehicle_type}</span></div>
+                <div class="detail-row"><span class="detail-label">Budget:</span><span class="detail-value">${apt.budget}${apt.budget_amount ? ' ($' + apt.budget_amount.toLocaleString() + ')' : ''}</span></div>
+                <div class="detail-row"><span class="detail-label">Appointment Date/Time:</span><span class="detail-value">${apt.datetime}</span></div>
+                <div class="detail-row"><span class="detail-label">Booked On:</span><span class="detail-value">${new Date(apt.created_at).toLocaleString()}</span></div>
               </div>
             </div>
           \`).join('');
@@ -1139,20 +1139,20 @@ conversationList.innerHTML = uniqueConvArray.map(conv => `
           callbacksList.innerHTML = statsData.recentCallbacks.map(cb => \`
             <div class="callback-card">
               <div class="card-header">
-               <div style="flex: 1;" onclick="toggleCallback(\${cb.id})">
-                  <div class="card-title">📞 \${cb.customer_name} - \${cb.vehicle_type}</div>
-                  <div class="card-preview">📞 \${cb.customer_phone} • ⏰ \${cb.datetime}</div>
+               <div style="flex: 1;" onclick="toggleCallback(${cb.id})">
+                  <div class="card-title">📞 ${cb.customer_name} - ${cb.vehicle_type}</div>
+                  <div class="card-preview">📞 ${cb.customer_phone} • ⏰ ${cb.datetime}</div>
                 </div>
-                <button class="btn-delete-small" onclick="event.stopPropagation(); deleteCallback(\${cb.id})">🗑️ Delete</button>
-<span class="expand-icon" id="cb-icon-\${cb.id}" onclick="toggleCallback(\${cb.id})">▼</span>
+                <button class="btn-delete-small" onclick="event.stopPropagation(); deleteCallback(${cb.id})">🗑️ Delete</button>
+<span class="expand-icon" id="cb-icon-${cb.id}" onclick="toggleCallback(${cb.id})">▼</span>
               </div>
-              <div class="card-details" id="cb-details-\${cb.id}">
-                <div class="detail-row"><span class="detail-label">Customer Name:</span><span class="detail-value">\${cb.customer_name}</span></div>
-                <div class="detail-row"><span class="detail-label">Phone Number:</span><span class="detail-value">\${cb.customer_phone}</span></div>
-                <div class="detail-row"><span class="detail-label">Vehicle Type:</span><span class="detail-value">\${cb.vehicle_type}</span></div>
-                <div class="detail-row"><span class="detail-label">Budget:</span><span class="detail-value">\${cb.budget}\${cb.budget_amount ? ' ($' + cb.budget_amount.toLocaleString() + ')' : ''}</span></div>
-                <div class="detail-row"><span class="detail-label">Preferred Call Time:</span><span class="detail-value">\${cb.datetime}</span></div>
-                <div class="detail-row"><span class="detail-label">Requested On:</span><span class="detail-value">\${new Date(cb.created_at).toLocaleString()}</span></div>
+              <div class="card-details" id="cb-details-${cb.id}">
+                <div class="detail-row"><span class="detail-label">Customer Name:</span><span class="detail-value">${cb.customer_name}</span></div>
+                <div class="detail-row"><span class="detail-label">Phone Number:</span><span class="detail-value">${cb.customer_phone}</span></div>
+                <div class="detail-row"><span class="detail-label">Vehicle Type:</span><span class="detail-value">${cb.vehicle_type}</span></div>
+                <div class="detail-row"><span class="detail-label">Budget:</span><span class="detail-value">${cb.budget}${cb.budget_amount ? ' ($' + cb.budget_amount.toLocaleString() + ')' : ''}</span></div>
+                <div class="detail-row"><span class="detail-label">Preferred Call Time:</span><span class="detail-value">${cb.datetime}</span></div>
+                <div class="detail-row"><span class="detail-label">Requested On:</span><span class="detail-value">${new Date(cb.created_at).toLocaleString()}</span></div>
               </div>
             </div>
           \`).join('');
@@ -1194,32 +1194,32 @@ conversationList.innerHTML = uniqueConvArray.map(conv => `
         
         messagesContainer.innerHTML = '<div class="messages-title">💬 Full Conversation Thread</div>' + 
           data.messages.map(msg => \`
-            <div class="message \${msg.role}">
-              <div class="role">\${msg.role === 'user' ? '👤 Customer' : '🤖 Jerry AI'}</div>
-              <div class="content">\${msg.content}</div>
-              <div class="time">\${new Date(msg.created_at).toLocaleString()}</div>
+            <div class="message ${msg.role}">
+              <div class="role">${msg.role === 'user' ? '👤 Customer' : '🤖 Jerry AI'}</div>
+              <div class="content">${msg.content}</div>
+              <div class="time">${new Date(msg.created_at).toLocaleString()}</div>
             </div>
           \`).join('') +
           \`
-          <div class="reply-form" id="\${replyFormId}">
+          <div class="reply-form" id="${replyFormId}">
             <h4>💬 Send Manual Reply</h4>
             <div class="reply-input-group">
               <input 
                 type="text" 
                 class="reply-input" 
-                id="\${inputId}" 
+                id="${inputId}" 
                 placeholder="Type your message to this customer..."
-                onkeypress="if(event.key === 'Enter') { event.preventDefault(); sendManualReply('\${phone}', '\${inputId}', '\${btnId}', '\${statusId}'); }"
+                onkeypress="if(event.key === 'Enter') { event.preventDefault(); sendManualReply('${phone}', '${inputId}', '${btnId}', '${statusId}'); }"
               >
               <button 
                 class="btn-reply" 
-                id="\${btnId}"
-                onclick="sendManualReply('\${phone}', '\${inputId}', '\${btnId}', '\${statusId}')"
+                id="${btnId}"
+                onclick="sendManualReply('${phone}', '${inputId}', '${btnId}', '${statusId}')"
               >
                 Send Reply
               </button>
             </div>
-            <div class="reply-status" id="\${statusId}"></div>
+            <div class="reply-status" id="${statusId}"></div>
           </div>
           \`;
       } catch (error) {
