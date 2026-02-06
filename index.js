@@ -1082,28 +1082,28 @@ const uniqueConvArray = Object.values(uniqueConversations);
 if (uniqueConvArray.length === 0) {
   conversationList.innerHTML = '<div class="empty-state">No conversations yet. Use "Launch Jerry" above to send your first SMS!</div>';
 } else {
-conversationList.innerHTML = uniqueConvArray.map(conv => \`
+conversationList.innerHTML = uniqueConvArray.map(conv => `
   <div class="conversation-item">
     <div class="conversation-header">
-      <div class="conversation-info" onclick="viewConversation('${conv.customer_phone}', this)">
+      <div class="conversation-info" onclick="viewConversation('\${conv.customer_phone}', this)">
         <div>
-          <span class="phone">${conv.customer_phone}</span>
-          <span class="name">${conv.customer_name || 'Unknown'}</span>
-          <span class="badge badge-${conv.status}">${conv.status}</span>
+          <span class="phone">\${conv.customer_phone}</span>
+          <span class="name">\${conv.customer_name || 'Unknown'}</span>
+          <span class="badge badge-\${conv.status}">\${conv.status}</span>
                   </div>
                   <div class="info">
-                    ${conv.vehicle_type || 'No vehicle selected'} • 
-                    ${conv.budget || 'No budget set'} • 
-                    Stage: ${conv.stage} •
-                    ${conv.message_count} messages
+                    \${conv.vehicle_type || 'No vehicle selected'} • 
+                    \${conv.budget || 'No budget set'} • 
+                    Stage: \${conv.stage} •
+                    \${conv.message_count} messages
                   </div>
-                  <div class="info">Started: ${new Date(conv.started_at).toLocaleString()}</div>
+                  <div class="info">Started: \${new Date(conv.started_at).toLocaleString()}</div>
                 </div>
-                <button class="btn-delete" onclick="deleteConversation('${conv.customer_phone}', event)" title="Delete conversation">×</button>
+                <button class="btn-delete" onclick="deleteConversation('\${conv.customer_phone}', event)" title="Delete conversation">×</button>
               </div>
-              <div class="messages-container" id="messages-${conv.customer_phone.replace(/[^0-9]/g, '')}"></div>
+              <div class="messages-container" id="messages-\${conv.customer_phone.replace(/[^0-9]/g, '')}"></div>
             </div>
-                    \`).join('');
+                    `).join('');
         }
         
         const appointmentsList = document.getElementById('appointmentsList');
