@@ -1097,13 +1097,13 @@ conversationList.innerHTML = uniqueConvArray.map(conv => `
                     Stage: ${conv.stage} •
                     ${conv.message_count} messages
                   </div>
-                  <div class="info">Started: \${new Date(conv.started_at).toLocaleString()}</div>
+                  <div class="info">Started: ${new Date(conv.started_at).toLocaleString()}</div>
                 </div>
-                <button class="btn-delete" onclick="deleteConversation('\${conv.customer_phone}', event)" title="Delete conversation">×</button>
+                <button class="btn-delete" onclick="deleteConversation('${conv.customer_phone}', event)" title="Delete conversation">×</button>
               </div>
-              <div class="messages-container" id="messages-\${conv.customer_phone.replace(/[^0-9]/g, '')}"></div>
+              <div class="messages-container" id="messages-${conv.customer_phone.replace(/[^0-9]/g, '')}"></div>
             </div>
-          \`).join('');
+                    `).join('');
         }
         
         const appointmentsList = document.getElementById('appointmentsList');
