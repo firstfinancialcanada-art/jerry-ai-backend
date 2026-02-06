@@ -1082,7 +1082,7 @@ const uniqueConvArray = Object.values(uniqueConversations);
 if (uniqueConvArray.length === 0) {
   conversationList.innerHTML = '<div class="empty-state">No conversations yet. Use "Launch Jerry" above to send your first SMS!</div>';
 } else {
-conversationList.innerHTML = uniqueConvArray.map(conv => `
+conversationList.innerHTML = uniqueConvArray.map(conv => \`
   <div class="conversation-item">
     <div class="conversation-header">
       <div class="conversation-info" onclick="viewConversation('${conv.customer_phone}', this)">
@@ -1103,7 +1103,7 @@ conversationList.innerHTML = uniqueConvArray.map(conv => `
               </div>
               <div class="messages-container" id="messages-${conv.customer_phone.replace(/[^0-9]/g, '')}"></div>
             </div>
-                    `).join('');
+                    \`).join('');
         }
         
         const appointmentsList = document.getElementById('appointmentsList');
