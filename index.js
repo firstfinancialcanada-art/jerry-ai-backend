@@ -1085,23 +1085,23 @@ if (uniqueConvArray.length === 0) {
 conversationList.innerHTML = uniqueConvArray.map(conv => `
   <div class="conversation-item">
     <div class="conversation-header">
-      <div class="conversation-info" onclick="viewConversation('\${conv.customer_phone}', this)">
+      <div class="conversation-info" onclick="viewConversation('${conv.customer_phone}', this)">
         <div>
-          <span class="phone">\${conv.customer_phone}</span>
-          <span class="name">\${conv.customer_name || 'Unknown'}</span>
-          <span class="badge badge-\${conv.status}">\${conv.status}</span>
+          <span class="phone">${conv.customer_phone}</span>
+          <span class="name">${conv.customer_name || 'Unknown'}</span>
+          <span class="badge badge-${conv.status}">${conv.status}</span>
                   </div>
                   <div class="info">
-                    \${conv.vehicle_type || 'No vehicle selected'} • 
-                    \${conv.budget || 'No budget set'} • 
-                    Stage: \${conv.stage} •
-                    \${conv.message_count} messages
+                    ${conv.vehicle_type || 'No vehicle selected'} • 
+                    ${conv.budget || 'No budget set'} • 
+                    Stage: ${conv.stage} •
+                    ${conv.message_count} messages
                   </div>
-                  <div class="info">Started: \${new Date(conv.started_at).toLocaleString()}</div>
+                  <div class="info">Started: ${new Date(conv.started_at).toLocaleString()}</div>
                 </div>
-                <button class="btn-delete" onclick="deleteConversation('\${conv.customer_phone}', event)" title="Delete conversation">×</button>
+                <button class="btn-delete" onclick="deleteConversation('${conv.customer_phone}', event)" title="Delete conversation">×</button>
               </div>
-              <div class="messages-container" id="messages-\${conv.customer_phone.replace(/[^0-9]/g, '')}"></div>
+              <div class="messages-container" id="messages-${conv.customer_phone.replace(/[^0-9]/g, '')}"></div>
             </div>
                     `).join('');
         }
@@ -1940,6 +1940,357 @@ app.get('/api/analytics', async (req, res) => {
     client.release();
   }
 });
+
+
+
+// =====================================================
+// BULK SMS CAMPAIGN SYSTEM
+// =====================================================
+
+// Initialize Twilio client (reuse existing if already initialized)
+const twilioClient = twilio(
+  process.env.TWILIO_ACCOUNT_SID,
+  process.env.TWILIO_AUTH_TOKEN
+);
+
+// Global campaign processor tracker
+let activeCampaignProcessor = null;
+
+// Sleep helper for delays
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+// Process a campaign (background job)
+async function processCampaign(campaignId) {
+  const client = await pool.connect();
+
+  try {
+    // Get campaign details
+    const campaign = await client.query(
+      'SELECT * FROM bulk_campaigns WHERE id = $1',
+      [campaignId]
+    );
+
+    if (campaign.rows.length === 0) {
+      console.log('❌ Campaign not found:', campaignId);
+      return;
+    }
+
+    const camp = campaign.rows[0];
+
+    if (camp.status === 'paused' || camp.status === 'completed') {
+      console.log('⏸️  Campaign paused or completed:', campaignId);
+      return;
+    }
+
+    // Update status to sending
+    await client.query(
+      'UPDATE bulk_campaigns SET status = $1, started_at = CURRENT_TIMESTAMP WHERE id = $2',
+      ['sending', campaignId]
+    );
+
+    // Get pending messages
+    const messages = await client.query(
+      `SELECT * FROM bulk_campaign_messages 
+       WHERE campaign_id = $1 AND status = 'pending' 
+       ORDER BY id ASC`,
+      [campaignId]
+    );
+
+    console.log(`📤 Processing campaign #${campaignId}: ${messages.rows.length} messages`);
+
+    let successCount = 0;
+    let failCount = 0;
+
+    // Process each message
+    for (let i = 0; i < messages.rows.length; i++) {
+      const msg = messages.rows[i];
+
+      // Check if paused
+      const statusCheck = await client.query(
+        'SELECT status FROM bulk_campaigns WHERE id = $1',
+        [campaignId]
+      );
+
+      if (statusCheck.rows[0].status === 'paused') {
+        console.log('⏸️  Campaign paused, stopping');
+        break;
+      }
+
+      try {
+        // Update to sending
+        await client.query(
+          'UPDATE bulk_campaign_messages SET status = $1 WHERE id = $2',
+          ['sending', msg.id]
+        );
+
+        // Send via Twilio
+        const twilioMessage = await twilioClient.messages.create({
+          from: process.env.TWILIO_PHONE,
+          to: msg.recipient_phone,
+          body: msg.message_body
+        });
+
+        // Mark as sent
+        await client.query(
+          `UPDATE bulk_campaign_messages 
+           SET status = 'sent', sent_at = CURRENT_TIMESTAMP, twilio_sid = $1 
+           WHERE id = $2`,
+          [twilioMessage.sid, msg.id]
+        );
+
+        successCount++;
+
+        // Update campaign count
+        await client.query(
+          'UPDATE bulk_campaigns SET sent_count = sent_count + 1 WHERE id = $1',
+          [campaignId]
+        );
+
+        console.log(`✅ Sent ${i + 1}/${messages.rows.length} to ${msg.recipient_phone}`);
+
+      } catch (error) {
+        console.error(`❌ Failed to send to ${msg.recipient_phone}:`, error.message);
+
+        // Mark as failed
+        await client.query(
+          `UPDATE bulk_campaign_messages 
+           SET status = 'failed', failed_at = CURRENT_TIMESTAMP, error_message = $1 
+           WHERE id = $2`,
+          [error.message, msg.id]
+        );
+
+        failCount++;
+
+        await client.query(
+          'UPDATE bulk_campaigns SET failed_count = failed_count + 1 WHERE id = $1',
+          [campaignId]
+        );
+      }
+
+      // Wait before next message
+      if (i < messages.rows.length - 1) {
+        const delay = camp.delay_min * 1000 + Math.random() * (camp.delay_max - camp.delay_min) * 1000;
+        console.log(`⏳ Waiting ${(delay / 1000).toFixed(1)}s...`);
+        await sleep(delay);
+      }
+    }
+
+    // Mark as completed
+    await client.query(
+      `UPDATE bulk_campaigns 
+       SET status = 'completed', completed_at = CURRENT_TIMESTAMP 
+       WHERE id = $1`,
+      [campaignId]
+    );
+
+    console.log(`✅ Campaign #${campaignId} completed: ${successCount} sent, ${failCount} failed`);
+
+  } catch (error) {
+    console.error('❌ Campaign processor error:', error);
+    await client.query(
+      'UPDATE bulk_campaigns SET status = $1 WHERE id = $2',
+      ['failed', campaignId]
+    );
+  } finally {
+    client.release();
+  }
+}
+
+// Get all campaigns
+app.get('/api/bulk-sms/campaigns', async (req, res) => {
+  const client = await pool.connect();
+  try {
+    const result = await client.query(
+      `SELECT *, 
+        (total_recipients - sent_count - failed_count) as pending_count
+       FROM bulk_campaigns 
+       ORDER BY created_at DESC`
+    );
+    res.json({ campaigns: result.rows });
+  } catch (error) {
+    console.error('Error fetching campaigns:', error);
+    res.status(500).json({ error: error.message });
+  } finally {
+    client.release();
+  }
+});
+
+// Get single campaign
+app.get('/api/bulk-sms/campaigns/:id', async (req, res) => {
+  const { id } = req.params;
+  const client = await pool.connect();
+
+  try {
+    const campaign = await client.query(
+      'SELECT * FROM bulk_campaigns WHERE id = $1',
+      [id]
+    );
+
+    if (campaign.rows.length === 0) {
+      return res.status(404).json({ error: 'Campaign not found' });
+    }
+
+    const messages = await client.query(
+      'SELECT * FROM bulk_campaign_messages WHERE campaign_id = $1 ORDER BY created_at DESC',
+      [id]
+    );
+
+    res.json({
+      campaign: campaign.rows[0],
+      messages: messages.rows
+    });
+  } catch (error) {
+    console.error('Error fetching campaign:', error);
+    res.status(500).json({ error: error.message });
+  } finally {
+    client.release();
+  }
+});
+
+// Create campaign
+app.post('/api/bulk-sms/campaigns', async (req, res) => {
+  const { 
+    name, 
+    message, 
+    recipients,
+    scheduledFor = null,
+    batchSize = 50,
+    delayMin = 5,
+    delayMax = 10
+  } = req.body;
+
+  const client = await pool.connect();
+
+  try {
+    await client.query('BEGIN');
+
+    // Create campaign
+    const campaign = await client.query(
+      `INSERT INTO bulk_campaigns 
+       (name, message, total_recipients, batch_size, delay_min, delay_max, scheduled_for, status) 
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8) 
+       RETURNING *`,
+      [name, message, recipients.length, batchSize, delayMin, delayMax, scheduledFor, scheduledFor ? 'scheduled' : 'draft']
+    );
+
+    const campaignId = campaign.rows[0].id;
+
+    // Insert recipient messages
+    for (const recipient of recipients) {
+      let personalizedMsg = message
+        .replace('{name}', recipient.name || 'there')
+        .replace('{phone}', recipient.phone);
+
+      await client.query(
+        `INSERT INTO bulk_campaign_messages 
+         (campaign_id, recipient_phone, recipient_name, message_body) 
+         VALUES ($1, $2, $3, $4)`,
+        [campaignId, recipient.phone, recipient.name, personalizedMsg]
+      );
+    }
+
+    await client.query('COMMIT');
+
+    res.json({
+      success: true,
+      campaign: campaign.rows[0]
+    });
+
+  } catch (error) {
+    await client.query('ROLLBACK');
+    console.error('Error creating campaign:', error);
+    res.status(500).json({ error: error.message });
+  } finally {
+    client.release();
+  }
+});
+
+// Start campaign
+app.post('/api/bulk-sms/campaigns/:id/start', async (req, res) => {
+  const { id } = req.params;
+  res.json({ success: true, message: 'Campaign started' });
+  processCampaign(parseInt(id));
+});
+
+// Pause campaign
+app.post('/api/bulk-sms/campaigns/:id/pause', async (req, res) => {
+  const { id } = req.params;
+  const client = await pool.connect();
+
+  try {
+    await client.query(
+      'UPDATE bulk_campaigns SET status = $1 WHERE id = $2',
+      ['paused', id]
+    );
+    res.json({ success: true, message: 'Campaign paused' });
+  } catch (error) {
+    console.error('Error pausing campaign:', error);
+    res.status(500).json({ error: error.message });
+  } finally {
+    client.release();
+  }
+});
+
+// Resume campaign
+app.post('/api/bulk-sms/campaigns/:id/resume', async (req, res) => {
+  const { id } = req.params;
+  const client = await pool.connect();
+
+  try {
+    await client.query(
+      'UPDATE bulk_campaigns SET status = $1 WHERE id = $2',
+      ['sending', id]
+    );
+    res.json({ success: true, message: 'Campaign resumed' });
+    processCampaign(parseInt(id));
+  } catch (error) {
+    console.error('Error resuming campaign:', error);
+    res.status(500).json({ error: error.message });
+  } finally {
+    client.release();
+  }
+});
+
+// Delete campaign
+app.delete('/api/bulk-sms/campaigns/:id', async (req, res) => {
+  const { id } = req.params;
+  const client = await pool.connect();
+
+  try {
+    await client.query('DELETE FROM bulk_campaigns WHERE id = $1', [id]);
+    res.json({ success: true, message: 'Campaign deleted' });
+  } catch (error) {
+    console.error('Error deleting campaign:', error);
+    res.status(500).json({ error: error.message });
+  } finally {
+    client.release();
+  }
+});
+
+// Get recipients
+app.get('/api/bulk-sms/recipients', async (req, res) => {
+  const client = await pool.connect();
+  try {
+    const result = await client.query(
+      `SELECT DISTINCT customer_phone as phone, customer_name as name 
+       FROM conversations 
+       WHERE customer_phone IS NOT NULL 
+       AND status = 'active'
+       ORDER BY customer_name`
+    );
+    res.json({ recipients: result.rows });
+  } catch (error) {
+    console.error('Error fetching recipients:', error);
+    res.status(500).json({ error: error.message });
+  } finally {
+    client.release();
+  }
+});
+
+console.log('✅ Bulk SMS API routes loaded');
+
 
 app.listen(PORT, HOST, () => {
   console.log(`✅ Jerry AI Backend - Database Edition - Port ${PORT}`);
