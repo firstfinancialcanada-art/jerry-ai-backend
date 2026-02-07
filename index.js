@@ -442,23 +442,20 @@ app.get('/dashboard', async (req, res) => {
       flex: 1;
     }
     .btn-delete {
- .btn-delete-small {
-  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%) !important;
-  color: white !important;
-  border: none !important;
-  padding: 8px 14px !important;
-  border-radius: 8px !important;
-  font-size: 0.85rem !important;
-  font-weight: 600 !important;
-  cursor: pointer !important;
-  margin-left: 12px !important;
-  box-shadow: 0 2px 8px rgba(239,68,68,0.4) !important;
-  transition: all 0.3s !important;
+    .btn-delete-small {
+  background: #ef4444;
+  color: white;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.3s;
+  margin-left: 10px;
 }
 .btn-delete-small:hover {
-  background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%) !important;
-  transform: translateY(-2px) !important;
-  box-shadow: 0 4px 12px rgba(239,68,68,0.6) !important;
+  background: #dc2626;
+  transform: scale(1.05);
 }
 
       background: #ef4444;
@@ -941,7 +938,7 @@ app.get('/dashboard', async (req, res) => {
     }
     
     
-       function filterConversations() {
+    function filterConversations() {
       const searchBox = document.getElementById('searchBox');
       const searchTerm = searchBox.value.toLowerCase().replace(/[^0-9a-z]/g, '');
       const conversationItems = document.querySelectorAll('.conversation-item');
@@ -991,43 +988,6 @@ app.get('/dashboard', async (req, res) => {
       }
     }
 
-    async function deleteAppointment(aptId) {
-      if (!confirm('Delete this appointment?')) return;
-      try {
-        const res = await fetch('/api/appointment/' + aptId, {method: 'DELETE'});
-        const data = await res.json();
-        if (data.success) {
-          alert('Appointment deleted!');
-          loadDashboard();
-        } else {
-          alert('Failed: ' + (data.error || 'Unknown'));
-        }
-      } catch (err) {
-        alert('Error: ' + err.message);
-      }
-    }
-
-    async function deleteCallback(cbId) {
-      if (!confirm('Delete this callback?')) return;
-      try {
-        const res = await fetch('/api/callback/' + cbId, {method: 'DELETE'});
-        const data = await res.json();
-        if (data.success) {
-          alert('Callback deleted!');
-          loadDashboard();
-        } else {
-          alert('Failed: ' + (data.error || 'Unknown'));
-        }
-      } catch (err) {
-        alert('Error: ' + err.message);
-      }
-    }
-
-      } catch (error) {
-        alert('Error: ' + error.message);
-      }
-    }
-
     async function loadDashboard() {
       try {
         const statsData = await fetch('/api/dashboard').then(r => r.json());
@@ -1064,37 +1024,25 @@ app.get('/dashboard', async (req, res) => {
         document.getElementById('totalAppointments').textContent = statsData.stats.totalAppointments;
         document.getElementById('totalCallbacks').textContent = statsData.stats.totalCallbacks;
         
-const conversations = await fetch('/api/conversations').then(r => r.json());
-const conversationList = document.getElementById('conversationList');
-
-// DEDUPLICATE conversations by phone number (fixes duplicate entries with 10+ messages)
-const uniqueConversations = {};
-conversations.forEach(conv => {
-  const phone = conv.customer_phone;
-  if (!uniqueConversations[phone] || 
-      new Date(conv.updated_at) > new Date(uniqueConversations[phone].updated_at)) {
-    uniqueConversations[phone] = conv;
-  }
-});
-
-const uniqueConvArray = Object.values(uniqueConversations);
-
-if (uniqueConvArray.length === 0) {
-  conversationList.innerHTML = '<div class="empty-state">No conversations yet. Use "Launch Jerry" above to send your first SMS!</div>';
-} else {
-conversationList.innerHTML = uniqueConvArray.map(conv => `
-  <div class="conversation-item">
-    <div class="conversation-header">
-      <div class="conversation-info" onclick="viewConversation('\${conv.customer_phone}', this)">
-        <div>
-          <span class="phone">\${conv.customer_phone}</span>
-          <span class="name">\${conv.customer_name || 'Unknown'}</span>
-          <span class="badge badge-\${conv.status}">\${conv.status}</span>
+        const conversations = await fetch('/api/conversations').then(r => r.json());
+        const conversationList = document.getElementById('conversationList');
+        
+        if (conversations.length === 0) {
+          conversationList.innerHTML = '<div class="empty-state">No conversations yet. Use "Launch Jerry" above to send your first SMS!</div>';
+        } else {
+          conversationList.innerHTML = conversations.map(conv => \`
+            <div class="conversation-item">
+              <div class="conversation-header">
+                <div class="conversation-info" onclick="viewConversation('\${conv.customer_phone}', this)">
+                  <div>
+                    <span class="phone">\${conv.customer_phone}</span>
+                    <span class="name">\${conv.customer_name || 'Unknown'}</span>
+                    <span class="badge badge-\${conv.status}">\${conv.status}</span>
                   </div>
                   <div class="info">
                     \${conv.vehicle_type || 'No vehicle selected'} • 
                     \${conv.budget || 'No budget set'} • 
-                    Stage: \${conv.stage} •
+                    Stage: \${conv.stage} • 
                     \${conv.message_count} messages
                   </div>
                   <div class="info">Started: \${new Date(conv.started_at).toLocaleString()}</div>
@@ -1103,7 +1051,7 @@ conversationList.innerHTML = uniqueConvArray.map(conv => `
               </div>
               <div class="messages-container" id="messages-\${conv.customer_phone.replace(/[^0-9]/g, '')}"></div>
             </div>
-                    `).join('');
+          \`).join('');
         }
         
         const appointmentsList = document.getElementById('appointmentsList');
@@ -1228,7 +1176,7 @@ conversationList.innerHTML = uniqueConvArray.map(conv => `
     }
     
     loadDashboard();
-    setInterval(loadDashboard, 25000);
+    setInterval(loadDashboard, 10000);
   </script>
 </body>
 </html>
