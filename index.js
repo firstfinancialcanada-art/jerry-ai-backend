@@ -173,40 +173,6 @@ async function hasActiveConversation(phone) {
 
 // Delete conversation and its messages
 async function deleteConversation(phone) {
-  // API: Delete individual appointment
-async function deleteAppointment(appointmentId) {
-  if (!confirm('Delete this appointment?')) return;
-  
-  const client = await pool.connect();
-  try {
-    await client.query('DELETE FROM appointments WHERE id = $1', [appointmentId]);
-    showNotification('✅ Appointment deleted');
-    loadStats();
-  } catch (error) {
-    console.error('Error deleting appointment:', error);
-    showNotification('❌ Error deleting appointment', 'error');
-  } finally {
-    client.release();
-  }
-}
-
-// API: Delete individual callback
-async function deleteCallback(callbackId) {
-  if (!confirm('Delete this callback?')) return;
-  
-  const client = await pool.connect();
-  try {
-    await client.query('DELETE FROM callbacks WHERE id = $1', [callbackId]);
-    showNotification('✅ Callback deleted');
-    loadStats();
-  } catch (error) {
-    console.error('Error deleting callback:', error);
-    showNotification('❌ Error deleting callback', 'error');
-  } finally {
-    client.release();
-  }
-}
-
   const client = await pool.connect();
   try {
     const conversation = await client.query(
@@ -217,13 +183,10 @@ async function deleteCallback(callbackId) {
     if (conversation.rows.length > 0) {
       const conversationId = conversation.rows[0].id;
       
-      // Delete from all related tables
       await client.query('DELETE FROM messages WHERE conversation_id = $1', [conversationId]);
-      await client.query('DELETE FROM appointments WHERE customer_phone = $1', [phone]);
-      await client.query('DELETE FROM callbacks WHERE customer_phone = $1', [phone]);
       await client.query('DELETE FROM conversations WHERE id = $1', [conversationId]);
       
-      console.log('🗑️ Conversation deleted (with appointments & callbacks):', phone);
+      console.log('🗑️ Conversation deleted:', phone);
       return true;
     }
     
@@ -442,22 +405,6 @@ app.get('/dashboard', async (req, res) => {
       flex: 1;
     }
     .btn-delete {
-    .btn-delete-small {
-  background: #ef4444;
-  color: white;
-  border: none;
-  padding: 6px 12px;
-  border-radius: 6px;
-  font-size: 0.85rem;
-  cursor: pointer;
-  transition: all 0.3s;
-  margin-left: 10px;
-}
-.btn-delete-small:hover {
-  background: #dc2626;
-  transform: scale(1.05);
-}
-
       background: #ef4444;
       color: white;
       border: none;
@@ -474,7 +421,6 @@ app.get('/dashboard', async (req, res) => {
       margin-left: 15px;
     }
     .btn-delete:hover {
-    
       background: #dc2626;
       transform: scale(1.1);
     }
@@ -1059,14 +1005,13 @@ app.get('/dashboard', async (req, res) => {
           appointmentsList.innerHTML = '<div class="empty-state">No appointments yet.</div>';
         } else {
           appointmentsList.innerHTML = statsData.recentAppointments.map(apt => \`
-            <div class="appointment-card">
+            <div class="appointment-card" onclick="toggleAppointment(\${apt.id})">
               <div class="card-header">
-                <div style="flex: 1;" onclick="toggleAppointment(\${apt.id})">
+                <div style="flex: 1;">
                   <div class="card-title">🚗 \${apt.customer_name} - \${apt.vehicle_type}</div>
                   <div class="card-preview">📞 \${apt.customer_phone} • 📅 \${apt.datetime}</div>
                 </div>
-                <button class="btn-delete-small" onclick="event.stopPropagation(); deleteAppointment(\${apt.id})">🗑️ Delete</button>
-<span class="expand-icon" id="apt-icon-\${apt.id}" onclick="toggleAppointment(\${apt.id})">▼</span>
+                <span class="expand-icon" id="apt-icon-\${apt.id}">▼</span>
               </div>
               <div class="card-details" id="apt-details-\${apt.id}">
                 <div class="detail-row"><span class="detail-label">Customer Name:</span><span class="detail-value">\${apt.customer_name}</span></div>
@@ -1085,14 +1030,13 @@ app.get('/dashboard', async (req, res) => {
           callbacksList.innerHTML = '<div class="empty-state">No callback requests yet.</div>';
         } else {
           callbacksList.innerHTML = statsData.recentCallbacks.map(cb => \`
-            <div class="callback-card">
+            <div class="callback-card" onclick="toggleCallback(\${cb.id})">
               <div class="card-header">
-               <div style="flex: 1;" onclick="toggleCallback(\${cb.id})">
+                <div style="flex: 1;">
                   <div class="card-title">📞 \${cb.customer_name} - \${cb.vehicle_type}</div>
                   <div class="card-preview">📞 \${cb.customer_phone} • ⏰ \${cb.datetime}</div>
                 </div>
-                <button class="btn-delete-small" onclick="event.stopPropagation(); deleteCallback(\${cb.id})">🗑️ Delete</button>
-<span class="expand-icon" id="cb-icon-\${cb.id}" onclick="toggleCallback(\${cb.id})">▼</span>
+                <span class="expand-icon" id="cb-icon-\${cb.id}">▼</span>
               </div>
               <div class="card-details" id="cb-details-\${cb.id}">
                 <div class="detail-row"><span class="detail-label">Customer Name:</span><span class="detail-value">\${cb.customer_name}</span></div>
@@ -1286,37 +1230,6 @@ app.delete('/api/conversation/:phone', async (req, res) => {
     res.json({ success: false, error: error.message });
   }
 });
-// API Delete individual appointment
-app.delete('/api/appointment/:id', async (req, res) => {
-  const client = await pool.connect();
-  try {
-    const { id } = req.params;
-    await client.query('DELETE FROM appointments WHERE id = $1', [id]);
-    console.log('✅ Appointment deleted:', id);
-    res.json({ success: true, message: 'Appointment deleted' });
-  } catch (error) {
-    console.error('Error deleting appointment:', error);
-    res.json({ success: false, error: error.message });
-  } finally {
-    client.release();
-  }
-});
-
-// API Delete individual callback
-app.delete('/api/callback/:id', async (req, res) => {
-  const client = await pool.connect();
-  try {
-    const { id } = req.params;
-    await client.query('DELETE FROM callbacks WHERE id = $1', [id]);
-    console.log('✅ Callback deleted:', id);
-    res.json({ success: true, message: 'Callback deleted' });
-  } catch (error) {
-    console.error('Error deleting callback:', error);
-    res.json({ success: false, error: error.message });
-  } finally {
-    client.release();
-  }
-});
 
 // API: Manual reply (NEW)
 app.post('/api/manual-reply', async (req, res) => {
@@ -1372,14 +1285,8 @@ app.post('/api/start-sms', async (req, res) => {
     const messageBody = message || "Hi! 👋 I'm Jerry from the dealership. I wanted to reach out and see if you're interested in finding your perfect vehicle. What type of car are you looking for? (Reply STOP to opt out)";
     
     await getOrCreateCustomer(phone);
-const conversation = await getOrCreateConversation(phone);
-
-// Save the outgoing message to database so it appears in Recent Messages
-await saveMessage(conversation.id, phone, 'assistant', messageBody);
-
-await logAnalytics('sms_sent', phone, { messageBody });
-
-
+    await getOrCreateConversation(phone);
+    await logAnalytics('sms_sent', phone, { source: 'manual_campaign', message: messageBody });
     
     const accountSid = process.env.TWILIO_ACCOUNT_SID;
     const authToken = process.env.TWILIO_AUTH_TOKEN;
@@ -1418,6 +1325,13 @@ app.post('/api/sms-webhook', async (req, res) => {
         const conversation = await getOrCreateConversation(phone);
         await saveMessage(conversation.id, phone, 'user', message);
         
+        try {
+          const emailSubject = '🚨 New Message from ' + (conversation.customer_name || formatPhone(phone));
+          const emailBody = '<div style="font-family: Arial; max-width: 600px;"><div style="background: linear-gradient(135deg, #1e3a5f 0%, #2c4e6f 100%); padding: 20px; border-radius: 10px 10px 0 0;"><h1 style="color: white; margin: 0;">🚨 New Customer Message</h1></div><div style="background: #f7fafc; padding: 25px; border-radius: 0 0 10px 10px;"><table><tr><td style="padding: 12px; font-weight: bold;">Phone:</td><td style="padding: 12px;">' + formatPhone(phone) + '</td></tr><tr><td style="padding: 12px; font-weight: bold;">Name:</td><td style="padding: 12px;">' + (conversation.customer_name||'Not provided') + '</td></tr><tr><td style="padding: 12px; font-weight: bold;">Message:</td><td style="padding: 12px; font-weight: 600;">' + message + '</td></tr></table></div></div>';
+          await sendEmailNotification(emailSubject, emailBody);
+        } catch (err) { 
+          console.error('Email error:', err); 
+        }
         
         await touchConversation(conversation.id);
         await logAnalytics('message_received', phone, { message });
@@ -1437,25 +1351,14 @@ app.post('/api/sms-webhook', async (req, res) => {
           to: phone
         });
         
-               console.log('✅ Jerry replied:', aiResponse);
-        
-        // Send email notification (non-blocking, won't slow down SMS)
-        sendEmailNotification(
-          '🚨 New Message from ' + (conversation.customer_name || formatPhone(phone)),
-          '<div style="font-family: Arial; max-width: 600px;"><div style="background: linear-gradient(135deg, #1e3a5f 0%, #2c4e6f 100%); padding: 20px; border-radius: 10px 10px 0 0;"><h1 style="color: white; margin: 0;">🚨 New Customer Message</h1></div><div style="background: #f7fafc; padding: 25px; border-radius: 0 0 10px 10px;"><table><tr><td style="padding: 12px; font-weight: bold;">Phone:</td><td style="padding: 12px;">' + formatPhone(phone) + '</td></tr><tr><td style="padding: 12px; font-weight: bold;">Name:</td><td style="padding: 12px;">' + (conversation.customer_name||'Not provided') + '</td></tr><tr><td style="padding: 12px; font-weight: bold;">Message:</td><td style="padding: 12px; font-weight: 600;">' + message + '</td></tr></table></div></div>'
-        ).catch(err => {
-          console.error('Email error:', err);
-        });
-        
+        console.log('✅ Jerry replied:', aiResponse);
       } catch (bgError) {
         console.error('❌ Background processing error:', bgError);
       }
     })();
     
   } catch (error) {
-    console.error('❌ Webhook error:', error);        
-        
-
+    console.error('❌ Webhook error:', error);
     res.type('text/xml').send('<Response></Response>');
   }
 });
@@ -1506,31 +1409,7 @@ async function getJerryResponse(phone, message, conversation) {
       });
       return `Perfect! Sedans are reliable. What's your budget range? (e.g., $15k, $25k, $40k, $60k+)`;
     }
-        
-    if (lowerMsg.includes('sports') || lowerMsg.includes('coupe') || lowerMsg.includes('convertible')) {
-      await updateConversation(conversation.id, { 
-        vehicle_type: 'Sports Car',
-        stage: 'budget'
-      });
-      return `Exciting! Sports cars are fun. What's your budget range? (e.g., $25k, $40k, $60k+)`;
-    }
     
-    if (lowerMsg.includes('minivan') || lowerMsg.includes('van')) {
-      await updateConversation(conversation.id, { 
-        vehicle_type: 'Minivan',
-        stage: 'budget'
-      });
-      return `Great for families! What's your budget range? (e.g., $20k, $30k, $50k+)`;
-    }
-    
-    if (lowerMsg.includes('electric') || lowerMsg.includes('ev') || lowerMsg.includes('hybrid')) {
-      await updateConversation(conversation.id, { 
-        vehicle_type: 'Electric/Hybrid',
-        stage: 'budget'
-      });
-      return `Excellent choice! Eco-friendly options. What's your budget range? (e.g., $30k, $50k, $70k+)`;
-    }
-
     if (lowerMsg.includes('car') || lowerMsg.includes('vehicle') || 
         lowerMsg.includes('yes') || lowerMsg.includes('interested') ||
         lowerMsg.includes('want') || lowerMsg.includes('looking')) {
@@ -1563,12 +1442,7 @@ async function getJerryResponse(phone, message, conversation) {
         }
       }
     }
-       
-    // Validate budget amount is realistic
-    if (budgetAmount > 0 && budgetAmount < 5000) {
-      return "Just to clarify - is that $" + budgetAmount + " your total budget or down payment? Most vehicles start around $15k. Reply with your full budget (e.g., $20k, $30k).";
-    }
- 
+    
     if (budgetAmount > 0) {
       let budgetRange = '';
       if (budgetAmount < 30000) {
@@ -1660,46 +1534,8 @@ async function getJerryResponse(phone, message, conversation) {
   }
   
   if (conversation.stage === 'datetime' && !conversation.datetime) {
-    // NEW CODE - Handle vague datetime responses
-    let finalDateTime = message;
-    const lowerMsg = message.toLowerCase().trim();
-    
-    // Handle "today" variations
-    if (lowerMsg.includes('today')) {
-      if (lowerMsg.includes('morning')) finalDateTime = 'Today morning';
-      else if (lowerMsg.includes('afternoon')) finalDateTime = 'Today afternoon';
-      else if (lowerMsg.includes('evening')) finalDateTime = 'Today evening';
-      else finalDateTime = 'Today afternoon';
-    }
-    // Handle "tomorrow" variations
-    else if (lowerMsg.includes('tomorrow')) {
-      if (lowerMsg.includes('morning')) finalDateTime = 'Tomorrow morning';
-      else if (lowerMsg.includes('afternoon')) finalDateTime = 'Tomorrow afternoon';
-      else if (lowerMsg.includes('evening')) finalDateTime = 'Tomorrow evening';
-      else finalDateTime = 'Tomorrow afternoon';
-    }
-    // Handle "this weekend"
-    else if (lowerMsg.includes('this weekend') || lowerMsg === 'weekend') {
-      finalDateTime = 'This weekend';
-    }
-    // Handle "next week"
-    else if (lowerMsg.includes('next week')) {
-      finalDateTime = 'Next week';
-    }
-    // Handle "this morning/afternoon/evening"
-    else if (lowerMsg.includes('this morning')) {
-      finalDateTime = 'Today morning';
-    }
-    else if (lowerMsg.includes('this afternoon')) {
-      finalDateTime = 'Today afternoon';
-    }
-    else if (lowerMsg.includes('this evening') || lowerMsg.includes('tonight')) {
-      finalDateTime = 'Today evening';
-    }
-    // END NEW CODE
-    
-       await updateConversation(conversation.id, { 
-      datetime: finalDateTime,
+    await updateConversation(conversation.id, { 
+      datetime: message,
       stage: 'confirmed',
       status: 'converted'
     });
@@ -1730,23 +1566,8 @@ async function getJerryResponse(phone, message, conversation) {
     }
   }
   
- if (conversation.stage === 'confirmed') {
-    // Check for specific keywords after booking
-    if (lowerMsg.includes('reschedule') || lowerMsg.includes('change') || lowerMsg.includes('different time')) {
-      return `No problem ${conversation.customer_name}! What time works better for you? (e.g., Friday afternoon, Next Tuesday, This weekend)`;
-    }
-    
-    if (lowerMsg.includes('cancel')) {
-      await updateConversation(conversation.id, { status: 'cancelled' });
-      return `I've cancelled your appointment. No worries! If you change your mind, just text me back and we'll get you set up. 👍`;
-    }
-    
-    if (lowerMsg.includes('inventory') || lowerMsg.includes('photos') || lowerMsg.includes('pictures') || lowerMsg.includes('see vehicles')) {
-      return `Great question! I'll have one of our managers text you photos of ${conversation.vehicle_type}s in your ${conversation.budget} range. They'll reach out shortly! 📸`;
-    }
-    
-    // Default response for confirmed stage
-    return `Thanks ${conversation.customer_name}! We're all set for ${conversation.datetime}. 📅\n\nNeed to:\n• RESCHEDULE - Change your appointment time\n• INVENTORY - See photos of available vehicles\n• Just reply if you have questions!\n\nWe're in Calgary and deliver across Canada! 🚗`;
+  if (conversation.stage === 'confirmed') {
+    return `Thanks ${conversation.customer_name}! We're all set for ${conversation.datetime}. If you need anything or want to reschedule, just let me know! We're located in Calgary, AB and deliver across Canada.`;
   }
   
   return "Thanks for your message! To help you better, let me know:\n• What type of vehicle? (SUV, Sedan, Truck)\n• Your budget? (e.g., $20k)\n• Test drive or callback?";
