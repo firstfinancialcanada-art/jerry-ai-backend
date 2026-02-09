@@ -173,7 +173,41 @@ async function hasActiveConversation(phone) {
 
 // Delete conversation and its messages
 async function deleteConversation(phone) {
-  const client = await pool.connect();const client = await pool.connect();
+  // API: Delete individual appointment
+async function deleteAppointment(appointmentId) {
+  if (!confirm('Delete this appointment?')) return;
+  
+  const client = await pool.connect();
+  try {
+    await client.query('DELETE FROM appointments WHERE id = $1', [appointmentId]);
+    showNotification('✅ Appointment deleted');
+    loadStats();
+  } catch (error) {
+    console.error('Error deleting appointment:', error);
+    showNotification('❌ Error deleting appointment', 'error');
+  } finally {
+    client.release();
+  }
+}
+
+// API: Delete individual callback
+async function deleteCallback(callbackId) {
+  if (!confirm('Delete this callback?')) return;
+  
+  const client = await pool.connect();
+  try {
+    await client.query('DELETE FROM callbacks WHERE id = $1', [callbackId]);
+    showNotification('✅ Callback deleted');
+    loadStats();
+  } catch (error) {
+    console.error('Error deleting callback:', error);
+    showNotification('❌ Error deleting callback', 'error');
+  } finally {
+    client.release();
+  }
+}
+
+  const client = await pool.connect();
   try {
     const conversation = await client.query(
       'SELECT id FROM conversations WHERE customer_phone = $1 ORDER BY started_at DESC LIMIT 1',
@@ -764,6 +798,26 @@ app.get('/dashboard', async (req, res) => {
   </div>
   
   <script>
+    // Helper function to show notifications
+    function showNotification(message, type = 'success') {
+      const notification = document.createElement('div');
+      notification.style.cssText = `
+        position: fixed; top: 20px; right: 20px; padding: 15px 20px; 
+        border-radius: 8px; color: white; font-weight: 600; z-index: 10000;
+        transform: translateX(400px); transition: all 0.3s ease; 
+        box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        ${type === 'success' ? 'background: #10b981;' : 'background: #ef4444;'}
+      `;
+      notification.textContent = message;
+      document.body.appendChild(notification);
+
+      setTimeout(() => notification.style.transform = 'translateX(0)', 100);
+      setTimeout(() => {
+        notification.style.transform = 'translateX(400px)';
+        setTimeout(() => document.body.removeChild(notification), 300);
+      }, 3000);
+    }
+
     document.getElementById('phoneNumber').addEventListener('input', function(e) {
       let value = e.target.value.replace(/\\D/g, '');
       
