@@ -744,6 +744,52 @@ app.get('/dashboard', async (req, res) => {
   </div>
   
   <script>
+
+  // Helper function to show notifications
+function showNotification(message, type = 'success') {
+  const notification = document.createElement('div');
+  notification.style.cssText = `
+    position: fixed; top: 20px; right: 20px; padding: 15px 20px; 
+    border-radius: 8px; color: white; font-weight: 600; z-index: 10000;
+    transform: translateX(400px); transition: all 0.3s ease; box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    ${type === 'success' ? 'background: #10b981;' : 'background: #ef4444;'}
+  `;
+  notification.textContent = message;
+  document.body.appendChild(notification);
+  
+  setTimeout(() => notification.style.transform = 'translateX(0)', 100);
+  setTimeout(() => {
+    notification.style.transform = 'translateX(400px)';
+    setTimeout(() => document.body.removeChild(notification), 300);
+  }, 3000);
+}
+
+// Delete appointment
+async function deleteAppointment(appointmentId) {
+  if (!confirm('Delete this appointment?')) return;
+  try {
+    const response = await fetch(`/api/appointment/${appointmentId}`, { method: 'DELETE' });
+    const data = await response.json();
+    showNotification(data.message, data.success ? 'success' : 'error');
+    if (data.success) loadDashboard();
+  } catch (error) {
+    showNotification('Error deleting appointment', 'error');
+  }
+}
+
+// Delete callback
+async function deleteCallback(callbackId) {
+  if (!confirm('Delete this callback?')) return;
+  try {
+    const response = await fetch(`/api/callback/${callbackId}`, { method: 'DELETE' });
+    const data = await response.json();
+    showNotification(data.message, data.success ? 'success' : 'error');
+    if (data.success) loadDashboard();
+  } catch (error) {
+    showNotification('Error deleting callback', 'error');
+  }
+}
+
     document.getElementById('phoneNumber').addEventListener('input', function(e) {
       let value = e.target.value.replace(/\\D/g, '');
       
