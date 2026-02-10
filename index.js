@@ -1220,7 +1220,48 @@ app.get('/dashboard', async (req, res) => {
     
     loadDashboard();
     setInterval(loadDashboard, 10000);
-  </script>
+  
+
+      // Simple: Add engaged badges after conversations load
+      function addEngagedBadges() {
+        fetch('/api/engaged-ids')
+          .then(r => r.json())
+          .then(data => {
+            const engagedIds = data.engagedIds || [];
+            const convItems = document.querySelectorAll('.conversation-item');
+            convItems.forEach(item => {
+              const onClick = item.getAttribute('onclick');
+              if (onClick) {
+                const match = onClick.match(/viewConversation\((\d+)/);
+                if (match) {
+                  const convId = parseInt(match[1]);
+                  if (engagedIds.includes(convId)) {
+                    const badges = item.querySelector('.conversation-info');
+                    if (badges && !item.querySelector('.badge-engaged')) {
+                      const engagedBadge = document.createElement('span');
+                      engagedBadge.className = 'badge badge-engaged';
+                      engagedBadge.textContent = 'Engaged';
+                      engagedBadge.style.marginLeft = '5px';
+                      badges.appendChild(engagedBadge);
+                    }
+                  }
+                }
+              }
+            });
+          })
+          .catch(e => console.log('Could not load engaged badges'));
+      }
+
+      // Run after conversations load (when stats change)
+      const originalLoadStats = loadStats;
+      loadStats = function() {
+        originalLoadStats();
+        setTimeout(addEngagedBadges, 500);
+      };
+
+      // Also run on page load
+      setTimeout(addEngagedBadges, 1000);
+</script>
 </body>
 </html>
   `);
@@ -1941,11 +1982,9 @@ app.get('/api/engaged-ids', async (req, res) => {
       FROM messages 
       WHERE role = 'user'
     `);
-    const ids = result.rows.map(r => r.conversation_id);
-    res.json({ engagedIds: ids });
-    console.log('📊 Returned', ids.length, 'engaged conversation IDs');
+    res.json({ engagedIds: result.rows.map(r => r.conversation_id) });
   } catch (error) {
-    console.error('❌ Engaged IDs error:', error);
+    console.error('Engaged IDs error:', error);
     res.json({ engagedIds: [] });
   } finally {
     client.release();
@@ -1979,9 +2018,8 @@ app.get('/api/export/engaged', async (req, res) => {
     res.setHeader('Content-Type', 'text/csv');
     res.setHeader('Content-Disposition', 'attachment; filename="engaged_' + new Date().toISOString().split('T')[0] + '.csv"');
     res.send(rows.join('\n'));
-    console.log('📊 Exported', result.rows.length, 'engaged conversations');
   } catch (e) {
-    console.error('❌ Export error:', e);
+    console.error('Export error:', e);
     res.status(500).send('Export failed');
   } finally {
     client.release();
