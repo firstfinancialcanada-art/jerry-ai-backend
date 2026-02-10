@@ -1933,7 +1933,6 @@ app.get('/api/analytics', async (req, res) => {
 });
 
 
-// Helper: Get engaged conversation IDs
 app.get('/api/engaged-ids', async (req, res) => {
   const client = await pool.connect();
   try {
@@ -1944,6 +1943,7 @@ app.get('/api/engaged-ids', async (req, res) => {
     `);
     const ids = result.rows.map(r => r.conversation_id);
     res.json({ engagedIds: ids });
+    console.log('📊 Returned', ids.length, 'engaged conversation IDs');
   } catch (error) {
     console.error('❌ Engaged IDs error:', error);
     res.json({ engagedIds: [] });
@@ -1982,9 +1982,7 @@ app.get('/api/export/engaged', async (req, res) => {
     console.log('📊 Exported', result.rows.length, 'engaged conversations');
   } catch (e) {
     console.error('❌ Export error:', e);
-    res.setHeader('Content-Type', 'text/csv');
-    res.setHeader('Content-Disposition', 'attachment; filename="engaged_error.csv"');
-    res.send('Error,Message\n"Export Failed","' + e.message + '"');
+    res.status(500).send('Export failed');
   } finally {
     client.release();
   }
