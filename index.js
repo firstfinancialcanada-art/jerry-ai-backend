@@ -404,6 +404,19 @@ async function processBulkMessages() {
           to: message.recipient_phone
         });
 
+        // NEW: Save to conversation history so it shows in 50 most recent
+        const conversation = await getOrCreateConversation(message.recipient_phone);
+
+        // Update conversation with customer name from bulk list
+        if (message.recipient_name && !conversation.customer_name) {
+          await updateConversation(conversation.id, {
+            customer_name: message.recipient_name
+          });
+        }
+
+        // Save the bulk message to messages table
+        await saveMessage(conversation.id, message.recipient_phone, 'assistant', personalizedMessage);
+
         await updateMessageStatus(message.id, 'sent');
         console.log(`✅ Sent to ${message.recipient_name} (${message.recipient_phone})`);
 
@@ -846,7 +859,7 @@ app.get('/dashboard', async (req, res) => {
       <!-- BULK SMS SECTION -->
       <div style="max-width: 1200px; margin: 20px auto; background: white; padding: 30px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.1);">
         <h2 style="margin: 0 0 10px 0; color: #2d3748;">📱 Bulk SMS Campaign</h2>
-        <p style="color: #718096; margin-bottom: 25px;">Upload CSV with names and phone numbers to send personalized messages (15 second intervals)</p>
+        <p style="color: #718096; margin-bottom: 25px;">Upload CSV • Send personalized messages • Track in conversations (15s intervals)</p>
 
         <div style="display: grid; gap: 20px;">
 
@@ -1537,7 +1550,7 @@ app.get('/dashboard', async (req, res) => {
             currentCampaignName = campaignName;
             document.getElementById('progressTracker').style.display = 'block';
             document.getElementById('campaignDetails').style.display = 'none';
-            alert(`✅ Campaign launched! ${result.messageCount} messages over ${Math.ceil(result.estimatedCompletionTime / 60)} minutes`);
+            alert(`✅ Campaign launched! ${result.messageCount} messages over ${Math.ceil(result.estimatedCompletionTime / 60)} minutes\n\n💬 Check "50 Most Recent Texts" to see sent messages!`);
             startProgressTracking(campaignName);
           } else {
             alert('Error: ' + result.error);
