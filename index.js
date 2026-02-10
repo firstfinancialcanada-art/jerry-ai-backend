@@ -443,38 +443,19 @@ app.get('/dashboard', async (req, res) => {
     }
     .btn-delete {
     .btn-delete-small {
-  background: #ef4444 !important;
-  color: white !important;
-  border: 2px solid #dc2626 !important;
-  width: 46px !important;
-  height: 46px !important;
-  min-width: 46px !important;
-  min-height: 46px !important;
-  border-radius: 50% !important;
-  font-size: 32px !important;
-  font-weight: bold !important;
-  line-height: 1 !important;
-  cursor: pointer !important;
-  display: inline-flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  transition: all 0.3s ease !important;
-  flex-shrink: 0 !important;
-  margin-left: 15px !important;
-  padding: 0 !important;
-  box-shadow: 0 4px 8px rgba(239, 68, 68, 0.5) !important;
-  vertical-align: middle !important;
-  position: relative !important;
+  background: #ef4444;
+  color: white;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.3s;
+  margin-left: 10px;
 }
 .btn-delete-small:hover {
-  background: #dc2626 !important;
-  border-color: #b91c1c !important;
-  transform: scale(1.25) rotate(90deg) !important;
-  box-shadow: 0 6px 16px rgba(239, 68, 68, 0.7) !important;
-}
-.btn-delete-small:active {
-  transform: scale(0.85) !important;
-  box-shadow: 0 2px 4px rgba(239, 68, 68, 0.5) !important;
+  background: #dc2626;
+  transform: scale(1.05);
 }
 
       background: #ef4444;
@@ -1122,7 +1103,7 @@ app.get('/dashboard', async (req, res) => {
                   <div class="card-title">🚗 \${apt.customer_name} - \${apt.vehicle_type}</div>
                   <div class="card-preview">📞 \${apt.customer_phone} • 📅 \${apt.datetime}</div>
                 </div>
-                <button class="btn-delete-small" onclick="event.stopPropagation(); deleteAppointment(\${apt.id})">×</button>
+                <button class="btn-delete-small" style="background: #ef4444 !important; color: white !important; border: 2px solid #dc2626 !important; width: 48px !important; height: 48px !important; min-width: 48px !important; min-height: 48px !important; border-radius: 50% !important; font-size: 34px !important; font-weight: bold !important; line-height: 1 !important; cursor: pointer !important; display: inline-flex !important; align-items: center !important; justify-content: center !important; transition: all 0.3s ease !important; flex-shrink: 0 !important; margin-left: 15px !important; padding: 0 !important; box-shadow: 0 4px 10px rgba(239, 68, 68, 0.6) !important; vertical-align: middle !important;" onclick="event.stopPropagation(); deleteAppointment(\${apt.id})">×</button>
 <span class="expand-icon" id="apt-icon-\${apt.id}" onclick="toggleAppointment(\${apt.id})">▼</span>
               </div>
               <div class="card-details" id="apt-details-\${apt.id}">
@@ -1148,7 +1129,7 @@ app.get('/dashboard', async (req, res) => {
                   <div class="card-title">📞 \${cb.customer_name} - \${cb.vehicle_type}</div>
                   <div class="card-preview">📞 \${cb.customer_phone} • ⏰ \${cb.datetime}</div>
                 </div>
-                <button class="btn-delete-small" onclick="event.stopPropagation(); deleteCallback(\${cb.id})">×</button>
+                <button class="btn-delete-small" style="background: #ef4444 !important; color: white !important; border: 2px solid #dc2626 !important; width: 48px !important; height: 48px !important; min-width: 48px !important; min-height: 48px !important; border-radius: 50% !important; font-size: 34px !important; font-weight: bold !important; line-height: 1 !important; cursor: pointer !important; display: inline-flex !important; align-items: center !important; justify-content: center !important; transition: all 0.3s ease !important; flex-shrink: 0 !important; margin-left: 15px !important; padding: 0 !important; box-shadow: 0 4px 10px rgba(239, 68, 68, 0.6) !important; vertical-align: middle !important;" onclick="event.stopPropagation(); deleteCallback(\${cb.id})">×</button>
 <span class="expand-icon" id="cb-icon-\${cb.id}" onclick="toggleCallback(\${cb.id})">▼</span>
               </div>
               <div class="card-details" id="cb-details-\${cb.id}">
