@@ -1,4 +1,4 @@
-xxxconst express = require('express');
+const express = require('express');
 const cors = require('cors');
 const fetch = require('node-fetch');
 const twilio = require('twilio');
@@ -20,6 +20,14 @@ const pool = new Pool({
   ssl: {
     rejectUnauthorized: false
   }
+});
+
+// Test database connection on startup
+
+
+// ✅ Handle unexpected database errors
+pool.on('error', (err) => {
+  console.error('⚠️ Unexpected database error:', err);
 });
 
 // Test database connection on startup
@@ -1401,7 +1409,7 @@ app.get('/dashboard', async (req, res) => {
     }
     
     loadDashboard();
-    setInterval(loadDashboard, 10000);
+    setInterval(loadDashboard, 30000)  // ✅ OPTIMIZED: 30s refresh;
   </script>
 
     <script>
@@ -2276,8 +2284,11 @@ app.get('/api/export/engaged', async (req, res) => {
 
 app.post('/api/bulk-sms/parse-csv', async (req, res) => {
   try {
-    const { csvData } = req.body;
-    if (!csvData) return res.status(400).json({ error: 'No CSV data' });
+    // ✅ FIXED: Handle both { csvData: "..." } and direct string formats
+    const csvData = req.body.csvData || req.body;
+    if (!csvData || typeof csvData !== 'string') {
+      return res.status(400).json({ error: 'No CSV data' });
+    }
 
     const lines = csvData.split(/\r?\n/);
     const contacts = [];
