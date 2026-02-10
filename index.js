@@ -813,39 +813,38 @@ app.get('/dashboard', async (req, res) => {
 
       <!-- BULK SMS -->
       <div style="max-width: 1200px; margin: 20px auto; background: white; padding: 30px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.1);">
-        <h2 style="margin: 0 0 10px 0; color: #2d3748;">📱 Bulk SMS Campaign</h2>
-        <p style="color: #718096; margin-bottom: 20px;">Upload CSV (Column A: Name, Column B: Phone) • 15s intervals</p>
+        <h2 style="margin: 0 0 10px 0; color: #2d3748;">📱 Bulk SMS</h2>
+        <p style="color: #718096; margin-bottom: 20px;">Send personalized messages (15s intervals)</p>
 
         <div style="padding: 20px; background: #f7fafc; border-radius: 10px; margin-bottom: 15px;">
-          <h3 style="margin: 0 0 10px 0;">Step 1: Upload CSV</h3>
-          <p style="font-size: 0.9rem; color: #666; margin-bottom: 10px;">Column A = Name, Column B = Phone (10 digits, no formatting needed)</p>
+          <h3 style="margin: 0 0 10px 0;">Upload CSV</h3>
+          <p style="font-size: 0.9rem; color: #666; margin-bottom: 10px;">Format: Name,Phone (e.g., John Doe,5551234567)</p>
           <input type="file" id="csvFile" accept=".csv,.txt" style="padding: 10px; border: 2px solid #cbd5e0; border-radius: 8px; width: 100%; margin-bottom: 10px;">
-          <button onclick="parseCsv()" style="background: #3182ce; color: white; border: none; padding: 12px 24px; border-radius: 8px; cursor: pointer; font-weight: 600;">Parse CSV</button>
+          <button onclick="parseCsv()" style="background: #3182ce; color: white; border: none; padding: 12px 24px; border-radius: 8px; cursor: pointer;">Parse CSV</button>
         </div>
 
         <div id="contactPreview" style="display: none; padding: 20px; background: #f0fff4; border-radius: 10px; margin-bottom: 15px;">
-          <h3 style="margin: 0 0 10px 0;">✅ <span id="contactCount">0</span> Contacts Loaded</h3>
+          <h3 style="margin: 0 0 10px 0;">✅ <span id="contactCount">0</span> Contacts</h3>
           <div id="contactList" style="max-height: 150px; overflow-y: auto; font-size: 0.9rem;"></div>
           <div id="csvErrors"></div>
         </div>
 
         <div id="campaignForm" style="display: none; padding: 20px; background: #fffaf0; border-radius: 10px; margin-bottom: 15px;">
-          <h3 style="margin: 0 0 15px 0;">Step 2: Campaign Details</h3>
+          <h3 style="margin: 0 0 15px 0;">Campaign Details</h3>
           <div style="margin-bottom: 15px;">
             <label style="display: block; font-weight: 600; margin-bottom: 5px;">Campaign Name</label>
-            <input type="text" id="campaignName" placeholder="e.g., Spring Sale 2026" style="width: 100%; padding: 12px; border: 2px solid #cbd5e0; border-radius: 8px;">
+            <input type="text" id="campaignName" placeholder="Spring Sale 2026" style="width: 100%; padding: 12px; border: 2px solid #cbd5e0; border-radius: 8px;">
           </div>
           <div style="margin-bottom: 15px;">
-            <label style="display: block; font-weight: 600; margin-bottom: 5px;">Message Template</label>
-            <p style="font-size: 0.85rem; color: #666; margin-bottom: 8px;">Use {name} to personalize each message</p>
-            <textarea id="messageTemplate" rows="4" placeholder="Hi {name}! We have amazing deals on trucks this month. Visit First Financial today!" style="width: 100%; padding: 12px; border: 2px solid #cbd5e0; border-radius: 8px; resize: vertical;"></textarea>
+            <label style="display: block; font-weight: 600; margin-bottom: 5px;">Message (use {name})</label>
+            <textarea id="messageTemplate" rows="4" placeholder="Hi {name}! Great deals this month!" style="width: 100%; padding: 12px; border: 2px solid #cbd5e0; border-radius: 8px; resize: vertical;"></textarea>
             <div style="font-size: 0.85rem; color: #666; margin-top: 5px;"><span id="charCount">0</span> characters</div>
           </div>
-          <button onclick="launchCampaign()" style="background: #48bb78; color: white; border: none; padding: 15px 30px; border-radius: 8px; font-size: 1.1rem; font-weight: 600; cursor: pointer; width: 100%;">🚀 Launch Campaign</button>
+          <button onclick="launchCampaign()" style="background: #48bb78; color: white; border: none; padding: 15px 30px; border-radius: 8px; font-size: 1.1rem; cursor: pointer; width: 100%;">🚀 Launch</button>
         </div>
 
         <div id="progressTracker" style="display: none; padding: 20px; background: #ebf8ff; border-radius: 10px;">
-          <h3 style="margin: 0 0 15px 0;">📊 Campaign Progress</h3>
+          <h3 style="margin: 0 0 15px 0;">Progress</h3>
           <div style="display: flex; gap: 15px; margin-bottom: 15px;">
             <div style="flex: 1; text-align: center; padding: 15px; background: white; border-radius: 8px;">
               <div style="font-size: 2rem; font-weight: bold; color: #48bb78;"><span id="sentCount">0</span></div>
@@ -861,9 +860,9 @@ app.get('/dashboard', async (req, res) => {
             </div>
           </div>
           <div style="background: #e2e8f0; border-radius: 8px; height: 20px; overflow: hidden;">
-            <div id="progressBar" style="background: linear-gradient(90deg, #48bb78 0%, #38a169 100%); height: 100%; width: 0%; transition: width 0.3s;"></div>
+            <div id="progressBar" style="background: #48bb78; height: 100%; width: 0%; transition: width 0.3s;"></div>
           </div>
-          <div style="text-align: center; margin-top: 10px; font-size: 0.9rem; color: #4a5568;"><span id="progressText">Preparing...</span></div>
+          <div style="text-align: center; margin-top: 10px; font-size: 0.9rem; color: #666;"><span id="progressText">...</span></div>
         </div>
       </div>
 
@@ -1413,7 +1412,7 @@ app.get('/dashboard', async (req, res) => {
       async function parseCsv() {
         const fileInput = document.getElementById('csvFile');
         const file = fileInput.files[0];
-        if (!file) { alert('Please select a CSV file'); return; }
+        if (!file) { alert('Select a CSV file'); return; }
 
         const reader = new FileReader();
         reader.onload = async function(e) {
@@ -1452,10 +1451,10 @@ app.get('/dashboard', async (req, res) => {
         list.innerHTML = html;
 
         if (errors.length > 0) {
-          let errorHtml = '<div style="background: #fff5f5; padding: 10px; border-radius: 6px; margin-top: 10px; border-left: 3px solid #f56565;">';
-          errorHtml += '<strong style="color: #c53030;">⚠️ ' + errors.length + ' Error(s):</strong>';
+          let errorHtml = '<div style="background: #fff5f5; padding: 10px; border-radius: 6px; margin-top: 10px;">';
+          errorHtml += '<strong style="color: #c53030;">⚠️ ' + errors.length + ' Errors:</strong>';
           for (let i = 0; i < Math.min(errors.length, 5); i++) {
-            errorHtml += '<div style="font-size: 0.85rem; color: #742a2a; margin-top: 3px;">Row ' + errors[i].row + ': ' + errors[i].error + '</div>';
+            errorHtml += '<div style="font-size: 0.85rem; color: #742a2a;">Row ' + errors[i].row + ': ' + errors[i].error + '</div>';
           }
           errorHtml += '</div>';
           document.getElementById('csvErrors').innerHTML = errorHtml;
@@ -1473,29 +1472,23 @@ app.get('/dashboard', async (req, res) => {
       async function launchCampaign() {
         const campaignName = document.getElementById('campaignName').value.trim();
         const messageTemplate = document.getElementById('messageTemplate').value.trim();
-
-        if (!campaignName) { alert('Please enter a campaign name'); return; }
-        if (!messageTemplate) { alert('Please enter a message template'); return; }
+        if (!campaignName) { alert('Enter campaign name'); return; }
+        if (!messageTemplate) { alert('Enter message'); return; }
         if (!messageTemplate.includes('{name}')) { alert('Message must include {name}'); return; }
-        if (parsedContacts.length === 0) { alert('No contacts loaded'); return; }
+        if (parsedContacts.length === 0) { alert('No contacts'); return; }
 
         try {
           const response = await fetch('/api/bulk-sms/create-campaign', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ 
-              campaignName: campaignName, 
-              messageTemplate: messageTemplate, 
-              contacts: parsedContacts 
-            })
+            body: JSON.stringify({ campaignName: campaignName, messageTemplate: messageTemplate, contacts: parsedContacts })
           });
           const result = await response.json();
-
           if (result.success) {
             currentCampaign = campaignName;
             document.getElementById('campaignForm').style.display = 'none';
             document.getElementById('progressTracker').style.display = 'block';
-            alert('✅ Campaign launched!\n\n' + result.messageCount + ' messages will be sent over ' + result.estimatedTime + ' minutes\n\nCheck "50 Most Recent Texts" to see sent messages!');
+            alert('✅ Launched! ' + result.messageCount + ' messages over ' + result.estimatedTime + ' min');
             trackProgress(campaignName);
           } else {
             alert('Error: ' + result.error);
@@ -1515,24 +1508,18 @@ app.get('/dashboard', async (req, res) => {
         try {
           const response = await fetch('/api/bulk-sms/campaign/' + encodeURIComponent(campaignName));
           const stats = await response.json();
-
           document.getElementById('sentCount').textContent = stats.sent;
           document.getElementById('pendingCount').textContent = stats.pending;
           document.getElementById('failedCount').textContent = stats.failed;
-
           const total = parseInt(stats.total);
           const sent = parseInt(stats.sent);
           const percent = total > 0 ? Math.round((sent / total) * 100) : 0;
           document.getElementById('progressBar').style.width = percent + '%';
-
           if (stats.pending === '0' || stats.pending === 0) {
-            document.getElementById('progressText').textContent = '✅ Campaign complete! ' + stats.sent + ' sent, ' + stats.failed + ' failed';
-            if (progressTimer) {
-              clearInterval(progressTimer);
-              progressTimer = null;
-            }
+            document.getElementById('progressText').textContent = '✅ Complete! ' + stats.sent + ' sent, ' + stats.failed + ' failed';
+            if (progressTimer) { clearInterval(progressTimer); progressTimer = null; }
           } else {
-            document.getElementById('progressText').textContent = 'Sending messages... (' + stats.sent + '/' + stats.total + ')';
+            document.getElementById('progressText').textContent = 'Sending... (' + stats.sent + '/' + stats.total + ')';
           }
         } catch (error) {
           console.error('Progress error:', error);
@@ -2292,19 +2279,14 @@ app.post('/api/bulk-sms/parse-csv', async (req, res) => {
     const { csvData } = req.body;
     if (!csvData) return res.status(400).json({ error: 'No CSV data' });
 
-    const lines = csvData.split(/\r?\n/).map(l => l.trim()).filter(l => l);
+    const lines = csvData.split(/\r?\n/);
     const contacts = [];
     const errors = [];
-
-    // Skip header row if present
     let startRow = 0;
-    if (lines[0] && (lines[0].toLowerCase().includes('name') || lines[0].toLowerCase().includes('phone'))) {
-      startRow = 1;
-    }
+    if (lines[0] && lines[0].toLowerCase().includes('name')) startRow = 1;
 
-    // Parse CSV: Column A = Name, Column B = Phone
     for (let i = startRow; i < lines.length; i++) {
-      const line = lines[i];
+      const line = lines[i].trim();
       if (!line) continue;
 
       const parts = line.split(',');
@@ -2313,22 +2295,15 @@ app.post('/api/bulk-sms/parse-csv', async (req, res) => {
         continue;
       }
 
-      // Column A = Name
       const name = parts[0].trim().replace(/^["']|["']$/g, '');
-
-      // Column B = Phone
       const rawPhone = parts[1].trim().replace(/^["']|["']$/g, '');
       const digitsOnly = rawPhone.replace(/[^0-9]/g, '');
 
-      // Auto-format phone (add country code if 10 digits)
       let phone = digitsOnly;
-      if (digitsOnly.length === 10) {
-        phone = '1' + digitsOnly;
-      }
+      if (digitsOnly.length === 10) phone = '1' + digitsOnly;
 
-      // Validate: must be 11 digits starting with 1
       if (phone.length !== 11 || !phone.startsWith('1')) {
-        errors.push({ row: i + 1, name, phone: rawPhone, error: 'Invalid phone (need 10 digits)' });
+        errors.push({ row: i + 1, name, phone: rawPhone, error: 'Invalid phone' });
         continue;
       }
 
@@ -2337,7 +2312,6 @@ app.post('/api/bulk-sms/parse-csv', async (req, res) => {
 
     res.json({ success: true, contacts, errors, total: contacts.length, errorCount: errors.length });
   } catch (error) {
-    console.error('CSV parse error:', error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -2355,7 +2329,6 @@ app.post('/api/bulk-sms/create-campaign', async (req, res) => {
     const messageIds = await saveBulkCampaign(campaignName, messageTemplate, contacts);
     res.json({ success: true, campaignName, messageCount: messageIds.length, estimatedTime: Math.ceil(contacts.length * 15 / 60) });
   } catch (error) {
-    console.error('Campaign error:', error);
     res.status(500).json({ error: error.message });
   }
 });
