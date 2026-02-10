@@ -404,17 +404,15 @@ async function processBulkMessages() {
           to: message.recipient_phone
         });
 
-        // NEW: Save to conversation history so it shows in 50 most recent
+        // Save to conversation history
         const conversation = await getOrCreateConversation(message.recipient_phone);
 
-        // Update conversation with customer name from bulk list
         if (message.recipient_name && !conversation.customer_name) {
           await updateConversation(conversation.id, {
             customer_name: message.recipient_name
           });
         }
 
-        // Save the bulk message to messages table
         await saveMessage(conversation.id, message.recipient_phone, 'assistant', personalizedMessage);
 
         await updateMessageStatus(message.id, 'sent');
@@ -1506,19 +1504,20 @@ app.get('/dashboard', async (req, res) => {
       function displayContacts(contacts, errors) {
         document.getElementById('contactCount').textContent = contacts.length;
         const list = document.getElementById('contactList');
-        list.innerHTML = contacts.slice(0, 10).map(c => 
-          `<div style="padding: 5px 0;">✓ ${c.name} - ${c.phone}</div>`
-        ).join('');
+        list.innerHTML = contacts.slice(0, 10).map(function(c) {
+          return '<div style="padding: 5px 0;">✓ ' + c.name + ' - ' + c.phone + '</div>';
+        }).join('');
         if (contacts.length > 10) {
-          list.innerHTML += `<div style="padding: 5px 0; font-style: italic; color: #718096;">...and ${contacts.length - 10} more</div>`;
+          list.innerHTML += '<div style="padding: 5px 0; font-style: italic; color: #718096;">...and ' + (contacts.length - 10) + ' more</div>';
         }
         if (errors.length > 0) {
-          document.getElementById('csvErrors').innerHTML = `
-            <div style="background: #fff5f5; padding: 10px; border-radius: 6px; border-left: 3px solid #f56565; margin-top: 10px;">
-              <strong style="color: #c53030;">⚠️ ${errors.length} Error(s):</strong>
-              ${errors.slice(0, 5).map(e => `<div style="font-size: 0.85rem; color: #742a2a;">Row ${e.row}: ${e.error}</div>`).join('')}
-            </div>
-          `;
+          document.getElementById('csvErrors').innerHTML = 
+            '<div style="background: #fff5f5; padding: 10px; border-radius: 6px; border-left: 3px solid #f56565; margin-top: 10px;">' +
+              '<strong style="color: #c53030;">⚠️ ' + errors.length + ' Error(s):</strong>' +
+              errors.slice(0, 5).map(function(e) {
+                return '<div style="font-size: 0.85rem; color: #742a2a;">Row ' + e.row + ': ' + e.error + '</div>';
+              }).join('') +
+            '</div>';
         }
         document.getElementById('contactPreview').style.display = 'block';
       }
@@ -1550,7 +1549,7 @@ app.get('/dashboard', async (req, res) => {
             currentCampaignName = campaignName;
             document.getElementById('progressTracker').style.display = 'block';
             document.getElementById('campaignDetails').style.display = 'none';
-            alert(`✅ Campaign launched! ${result.messageCount} messages over ${Math.ceil(result.estimatedCompletionTime / 60)} minutes\n\n💬 Check "50 Most Recent Texts" to see sent messages!`);
+            alert('✅ Campaign launched! ' + result.messageCount + ' messages over ' + Math.ceil(result.estimatedCompletionTime / 60) + ' minutes\n\n💬 Check "50 Most Recent Texts" to see sent messages!');
             startProgressTracking(campaignName);
           } else {
             alert('Error: ' + result.error);
@@ -1563,12 +1562,14 @@ app.get('/dashboard', async (req, res) => {
       function startProgressTracking(campaignName) {
         updateProgress(campaignName);
         if (progressInterval) clearInterval(progressInterval);
-        progressInterval = setInterval(() => updateProgress(campaignName), 3000);
+        progressInterval = setInterval(function() {
+          updateProgress(campaignName);
+        }, 3000);
       }
 
       async function updateProgress(campaignName) {
         try {
-          const response = await fetch(`/api/bulk-sms/campaign/${encodeURIComponent(campaignName)}`);
+          const response = await fetch('/api/bulk-sms/campaign/' + encodeURIComponent(campaignName));
           const stats = await response.json();
 
           document.getElementById('totalMessages').textContent = stats.total;
@@ -1581,14 +1582,14 @@ app.get('/dashboard', async (req, res) => {
 
           if (stats.pending === 0) {
             document.getElementById('progressText').textContent = 
-              `✅ Campaign complete! ${stats.sent} sent, ${stats.failed} failed`;
+              '✅ Campaign complete! ' + stats.sent + ' sent, ' + stats.failed + ' failed';
             if (progressInterval) {
               clearInterval(progressInterval);
               progressInterval = null;
             }
           } else {
             document.getElementById('progressText').textContent = 
-              `Sending messages... (${stats.sent}/${stats.total})`;
+              'Sending messages... (' + stats.sent + '/' + stats.total + ')';
           }
         } catch (error) {
           console.error('Progress update error:', error);
@@ -2417,16 +2418,6 @@ app.get('/api/bulk-sms/campaign/:campaignName', async (req, res) => {
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
-});
-
-app.post('/api/bulk-sms/processor/start', (req, res) => {
-  startBulkSmsProcessor();
-  res.json({ success: true, message: 'Processor started' });
-});
-
-app.post('/api/bulk-sms/processor/stop', (req, res) => {
-  stopBulkSmsProcessor();
-  res.json({ success: true, message: 'Processor stopped' });
 });
 
 app.get('/api/bulk-sms/campaigns', async (req, res) => {
