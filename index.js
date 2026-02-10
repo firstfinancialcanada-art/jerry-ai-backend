@@ -798,14 +798,42 @@ app.get('/dashboard', async (req, res) => {
   </div>
   
   <script>
-    // Notification helper
+    // Notification system
     function showNotification(message, type = 'success') {
       const notif = document.createElement('div');
-      notif.style.cssText = 'position:fixed;top:20px;right:20px;padding:15px 20px;border-radius:8px;color:white;font-weight:600;z-index:10000;transform:translateX(400px);transition:all 0.3s;box-shadow:0 4px 12px rgba(0,0,0,0.2);' + (type === 'success' ? 'background:#10b981;' : 'background:#ef4444;');
+      notif.style.cssText = 'position:fixed;top:20px;right:20px;padding:15px 25px;border-radius:8px;color:white;font-weight:600;z-index:10000;transform:translateX(400px);transition:all 0.3s;box-shadow:0 4px 12px rgba(0,0,0,0.2);' + (type === 'success' ? 'background:#10b981;' : 'background:#ef4444;');
       notif.textContent = message;
       document.body.appendChild(notif);
       setTimeout(() => notif.style.transform = 'translateX(0)', 100);
       setTimeout(() => { notif.style.transform = 'translateX(400px)'; setTimeout(() => document.body.removeChild(notif), 300); }, 3000);
+    }
+
+    // Delete appointment function
+    async function deleteAppointment(appointmentId) {
+      if (!confirm('Delete this appointment?')) return;
+      try {
+        const response = await fetch('/api/appointment/' + appointmentId, { method: 'DELETE' });
+        const data = await response.json();
+        showNotification(data.message, data.success ? 'success' : 'error');
+        if (data.success) setTimeout(() => loadDashboard(), 500);
+      } catch (error) {
+        console.error('Error:', error);
+        showNotification('Error deleting appointment', 'error');
+      }
+    }
+
+    // Delete callback function
+    async function deleteCallback(callbackId) {
+      if (!confirm('Delete this callback?')) return;
+      try {
+        const response = await fetch('/api/callback/' + callbackId, { method: 'DELETE' });
+        const data = await response.json();
+        showNotification(data.message, data.success ? 'success' : 'error');
+        if (data.success) setTimeout(() => loadDashboard(), 500);
+      } catch (error) {
+        console.error('Error:', error);
+        showNotification('Error deleting callback', 'error');
+      }
     }
 
     document.getElementById('phoneNumber').addEventListener('input', function(e) {
