@@ -173,7 +173,41 @@ async function hasActiveConversation(phone) {
 
 // Delete conversation and its messages
 async function deleteConversation(phone) {
-  const client = await pool.connect();const client = await pool.connect();
+  // API: Delete individual appointment
+async function deleteAppointment(appointmentId) {
+  if (!confirm('Delete this appointment?')) return;
+  
+  const client = await pool.connect();
+  try {
+    await client.query('DELETE FROM appointments WHERE id = $1', [appointmentId]);
+    showNotification('✅ Appointment deleted');
+    loadStats();
+  } catch (error) {
+    console.error('Error deleting appointment:', error);
+    showNotification('❌ Error deleting appointment', 'error');
+  } finally {
+    client.release();
+  }
+}
+
+// API: Delete individual callback
+async function deleteCallback(callbackId) {
+  if (!confirm('Delete this callback?')) return;
+  
+  const client = await pool.connect();
+  try {
+    await client.query('DELETE FROM callbacks WHERE id = $1', [callbackId]);
+    showNotification('✅ Callback deleted');
+    loadStats();
+  } catch (error) {
+    console.error('Error deleting callback:', error);
+    showNotification('❌ Error deleting callback', 'error');
+  } finally {
+    client.release();
+  }
+}
+
+  const client = await pool.connect();
   try {
     const conversation = await client.query(
       'SELECT id FROM conversations WHERE customer_phone = $1 ORDER BY started_at DESC LIMIT 1',
@@ -764,6 +798,16 @@ app.get('/dashboard', async (req, res) => {
   </div>
   
   <script>
+    // Notification helper
+    function showNotification(message, type = 'success') {
+      const notif = document.createElement('div');
+      notif.style.cssText = 'position:fixed;top:20px;right:20px;padding:15px 20px;border-radius:8px;color:white;font-weight:600;z-index:10000;transform:translateX(400px);transition:all 0.3s;box-shadow:0 4px 12px rgba(0,0,0,0.2);' + (type === 'success' ? 'background:#10b981;' : 'background:#ef4444;');
+      notif.textContent = message;
+      document.body.appendChild(notif);
+      setTimeout(() => notif.style.transform = 'translateX(0)', 100);
+      setTimeout(() => { notif.style.transform = 'translateX(400px)'; setTimeout(() => document.body.removeChild(notif), 300); }, 3000);
+    }
+
     document.getElementById('phoneNumber').addEventListener('input', function(e) {
       let value = e.target.value.replace(/\\D/g, '');
       
@@ -1720,44 +1764,6 @@ async function getJerryResponse(phone, message, conversation) {
 
 
 // ===== TEST & EXPORT ENDPOINTS =====
-// API: Delete appointment
-app.delete('/api/appointment/:id', async (req, res) => {
-  const client = await pool.connect();
-  try {
-    const result = await client.query('DELETE FROM appointments WHERE id = $1 RETURNING *', [req.params.id]);
-    if (result.rows.length > 0) {
-      console.log('🗑️ Appointment deleted:', req.params.id);
-      res.json({ success: true, message: 'Appointment deleted' });
-    } else {
-      res.json({ success: false, message: 'Appointment not found' });
-    }
-  } catch (error) {
-    console.error('❌ Error deleting appointment:', error);
-    res.status(500).json({ success: false, message: 'Error deleting appointment' });
-  } finally {
-    client.release();
-  }
-});
-
-// API: Delete callback
-app.delete('/api/callback/:id', async (req, res) => {
-  const client = await pool.connect();
-  try {
-    const result = await client.query('DELETE FROM callbacks WHERE id = $1 RETURNING *', [req.params.id]);
-    if (result.rows.length > 0) {
-      console.log('🗑️ Callback deleted:', req.params.id);
-      res.json({ success: true, message: 'Callback deleted' });
-    } else {
-      res.json({ success: false, message: 'Callback not found' });
-    }
-  } catch (error) {
-    console.error('❌ Error deleting callback:', error);
-    res.status(500).json({ success: false, message: 'Error deleting callback' });
-  } finally {
-    client.release();
-  }
-});
-
 app.get('/test-email', async (req, res) => {
   try {
     const result = await sendEmailNotification('🧪 Test Email', '<h1>Email Working!</h1><p>Test: ' + new Date().toLocaleString() + '</p>');
