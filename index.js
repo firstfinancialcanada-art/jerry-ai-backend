@@ -428,81 +428,6 @@ startBulkProcessor();
 
 // ===== ROUTES =====
 
-
-// ============================================================================
-// MESSAGE RETRY SYSTEM - Handles failed Twilio sends
-// ============================================================================
-
-// Store failed messages in memory (in production, use database)
-const failedMessages = new Map(); // phone -> { message, attempts, lastAttempt }
-
-// Send SMS with automatic retry
-async function sendSMSWithRetry(phone, message, maxRetries = 3) {
-  const accountSid = process.env.TWILIO_ACCOUNT_SID;
-  const authToken = process.env.TWILIO_AUTH_TOKEN;
-  const fromNumber = process.env.TWILIO_PHONE_NUMBER;
-  const client = twilio(accountSid, authToken);
-
-  let lastError = null;
-
-  for (let attempt = 1; attempt <= maxRetries; attempt++) {
-    try {
-      await client.messages.create({
-        body: message,
-        from: fromNumber,
-        to: phone
-      });
-
-      // Success! Remove from failed queue if it was there
-      failedMessages.delete(phone);
-      console.log(`✅ SMS sent to ${phone} (attempt ${attempt}/${maxRetries})`);
-      return { success: true };
-
-    } catch (error) {
-      lastError = error;
-      console.error(`❌ Attempt ${attempt}/${maxRetries} failed for ${phone}:`, error.message);
-
-      // If not last attempt, wait before retrying (exponential backoff)
-      if (attempt < maxRetries) {
-        const waitTime = Math.pow(2, attempt) * 1000; // 2s, 4s, 8s
-        console.log(`⏳ Waiting ${waitTime/1000}s before retry...`);
-        await new Promise(resolve => setTimeout(resolve, waitTime));
-      }
-    }
-  }
-
-  // All retries failed - add to failed queue
-  failedMessages.set(phone, {
-    message,
-    attempts: maxRetries,
-    lastAttempt: new Date(),
-    error: lastError.message
-  });
-
-  console.error(`💀 All ${maxRetries} attempts failed for ${phone}. Added to retry queue.`);
-  return { success: false, error: lastError.message };
-}
-
-// Retry failed messages (call this periodically)
-async function retryFailedMessages() {
-  if (failedMessages.size === 0) return;
-
-  console.log(`🔄 Retrying ${failedMessages.size} failed messages...`);
-
-  for (const [phone, data] of failedMessages.entries()) {
-    const hoursSinceLastAttempt = (Date.now() - data.lastAttempt) / (1000 * 60 * 60);
-
-    // Only retry if it's been at least 1 hour
-    if (hoursSinceLastAttempt < 1) continue;
-
-    console.log(`🔄 Retrying message to ${phone} (failed ${data.attempts} times)`);
-    await sendSMSWithRetry(phone, data.message, 2); // Try 2 more times
-  }
-}
-
-// Run retry check every 30 minutes
-setInterval(retryFailedMessages, 30 * 60 * 1000);
-
 // Health check
 app.get('/', (req, res) => {
   res.json({
@@ -1768,8 +1693,14 @@ app.post('/api/manual-reply', async (req, res) => {
     const fromNumber = process.env.TWILIO_PHONE_NUMBER;
     const client = twilio(accountSid, authToken);
     
-    const result = await sendSMSWithRetry(phone, message);
-    res.json(result);
+    await client.messages.create({
+      body: message,
+      from: fromNumber,
+      to: phone
+    });
+    
+    console.log('✅ Manual reply sent to:', phone);
+    res.json({ success: true, message: 'Reply sent!' });
   } catch (error) {
     console.error('❌ Error sending manual reply:', error);
     res.json({ success: false, error: error.message });
@@ -1811,12 +1742,14 @@ await logAnalytics('sms_sent', phone, { messageBody });
     const fromNumber = process.env.TWILIO_PHONE_NUMBER;
     const client = twilio(accountSid, authToken);
     
-    const result = await sendSMSWithRetry(phone, messageBody);
-    if (result.success) {
-      res.json({ success: true, message: \'SMS sent!\' });
-    } else {
-      res.json({ success: false, error: result.error });
-    }
+    await client.messages.create({
+      body: messageBody,
+      from: fromNumber,
+      to: phone
+    });
+    
+    console.log('✅ SMS sent to:', phone);
+    res.json({ success: true, message: 'SMS sent!' });
   } catch (error) {
     console.error('❌ Error sending SMS:', error);
     res.json({ success: false, error: error.message });
@@ -1854,7 +1787,13 @@ app.post('/api/sms-webhook', async (req, res) => {
         const fromNumber = process.env.TWILIO_PHONE_NUMBER;
         const client = twilio(accountSid, authToken);
         
-        await sendSMSWithRetry(phone, aiResponse);
+        await client.messages.create({
+          body: aiResponse,
+          from: fromNumber,
+          to: phone
+        });
+        
+               console.log('✅ Jerry replied:', aiResponse);
         
         // Send email notification (non-blocking, won't slow down SMS)
         sendEmailNotification(
