@@ -1116,7 +1116,7 @@ app.get('/dashboard', async (req, res) => {
                   <div class="card-title">🚗 \${apt.customer_name} - \${apt.vehicle_type}</div>
                   <div class="card-preview">📞 \${apt.customer_phone} • 📅 \${apt.datetime}</div>
                 </div>
-                <button class="btn-delete-small" onclick="event.stopPropagation(); deleteAppointment(\${apt.id})">🗑️ Delete</button>
+                <button class="btn-delete-small" onclick="event.stopPropagation(); deleteAppointment(\${apt.id})">×</button>
 <span class="expand-icon" id="apt-icon-\${apt.id}" onclick="toggleAppointment(\${apt.id})">▼</span>
               </div>
               <div class="card-details" id="apt-details-\${apt.id}">
@@ -1142,7 +1142,7 @@ app.get('/dashboard', async (req, res) => {
                   <div class="card-title">📞 \${cb.customer_name} - \${cb.vehicle_type}</div>
                   <div class="card-preview">📞 \${cb.customer_phone} • ⏰ \${cb.datetime}</div>
                 </div>
-                <button class="btn-delete-small" onclick="event.stopPropagation(); deleteCallback(\${cb.id})">🗑️ Delete</button>
+                <button class="btn-delete-small" onclick="event.stopPropagation(); deleteCallback(\${cb.id})">×</button>
 <span class="expand-icon" id="cb-icon-\${cb.id}" onclick="toggleCallback(\${cb.id})">▼</span>
               </div>
               <div class="card-details" id="cb-details-\${cb.id}">
