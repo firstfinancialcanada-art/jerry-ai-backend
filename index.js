@@ -445,30 +445,36 @@ app.get('/dashboard', async (req, res) => {
     .btn-delete-small {
   background: #ef4444 !important;
   color: white !important;
-  border: none !important;
-  width: 42px !important;
-  height: 42px !important;
+  border: 2px solid #dc2626 !important;
+  width: 46px !important;
+  height: 46px !important;
+  min-width: 46px !important;
+  min-height: 46px !important;
   border-radius: 50% !important;
-  font-size: 26px !important;
+  font-size: 32px !important;
+  font-weight: bold !important;
   line-height: 1 !important;
-  font-weight: normal !important;
   cursor: pointer !important;
-  display: flex !important;
+  display: inline-flex !important;
   align-items: center !important;
   justify-content: center !important;
-  transition: all 0.2s ease !important;
+  transition: all 0.3s ease !important;
   flex-shrink: 0 !important;
-  margin-left: 12px !important;
+  margin-left: 15px !important;
   padding: 0 !important;
-  box-shadow: 0 3px 6px rgba(239, 68, 68, 0.4) !important;
+  box-shadow: 0 4px 8px rgba(239, 68, 68, 0.5) !important;
+  vertical-align: middle !important;
+  position: relative !important;
 }
 .btn-delete-small:hover {
   background: #dc2626 !important;
-  transform: scale(1.2) !important;
-  box-shadow: 0 5px 12px rgba(239, 68, 68, 0.6) !important;
+  border-color: #b91c1c !important;
+  transform: scale(1.25) rotate(90deg) !important;
+  box-shadow: 0 6px 16px rgba(239, 68, 68, 0.7) !important;
 }
 .btn-delete-small:active {
-  transform: scale(0.9) !important;
+  transform: scale(0.85) !important;
+  box-shadow: 0 2px 4px rgba(239, 68, 68, 0.5) !important;
 }
 
       background: #ef4444;
