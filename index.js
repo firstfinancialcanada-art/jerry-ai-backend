@@ -288,7 +288,7 @@ async function logAnalytics(eventType, phone, data) {
 }
 
 
-// ===== BULK SMS DATABASE & PROCESSOR =====
+// ===== BULK SMS =====
 
 async function createBulkMessagesTable() {
   const client = await pool.connect();
@@ -309,7 +309,7 @@ async function createBulkMessagesTable() {
     `);
     console.log('✅ bulk_messages table ready');
   } catch (error) {
-    console.error('❌ Error creating bulk_messages table:', error);
+    console.error('❌ bulk_messages table error:', error);
   } finally {
     client.release();
   }
@@ -325,27 +325,23 @@ async function saveBulkCampaign(campaignName, messageTemplate, contacts) {
       const contact = contacts[i];
       const scheduledAt = new Date(Date.now() + (i * 15000));
       const result = await client.query(
-        `INSERT INTO bulk_messages (campaign_name, message_template, recipient_name, recipient_phone, scheduled_at)
-         VALUES ($1, $2, $3, $4, $5) RETURNING id`,
+        'INSERT INTO bulk_messages (campaign_name, message_template, recipient_name, recipient_phone, scheduled_at) VALUES ($1, $2, $3, $4, $5) RETURNING id',
         [campaignName, messageTemplate, contact.name, contact.phone, scheduledAt]
       );
       results.push(result.rows[0].id);
     }
-    console.log(`📨 Bulk campaign saved: ${campaignName} (${results.length} messages)`);
     return results;
   } finally {
     client.release();
   }
 }
 
-async function getPendingMessages(limit = 10) {
+async function getPendingBulkMessages(limit = 5) {
   const client = await pool.connect();
   try {
     const result = await client.query(
-      `SELECT * FROM bulk_messages 
-       WHERE status = 'pending' AND scheduled_at <= NOW()
-       ORDER BY scheduled_at ASC LIMIT $1`,
-      [limit]
+      'SELECT * FROM bulk_messages WHERE status = $1 AND scheduled_at <= NOW() ORDER BY scheduled_at ASC LIMIT $2',
+      ['pending', limit]
     );
     return result.rows;
   } finally {
@@ -353,32 +349,24 @@ async function getPendingMessages(limit = 10) {
   }
 }
 
-async function updateMessageStatus(messageId, status, errorMessage = null) {
+async function updateBulkMessageStatus(messageId, status, errorMessage = null) {
   const client = await pool.connect();
   try {
     await client.query(
-      `UPDATE bulk_messages 
-       SET status = $1, error_message = $2,
-           sent_at = CASE WHEN $1 = 'sent' THEN NOW() ELSE sent_at END
-       WHERE id = $3`,
-      [status, errorMessage, messageId]
+      'UPDATE bulk_messages SET status = $1, error_message = $2, sent_at = CASE WHEN $1 = $3 THEN NOW() ELSE sent_at END WHERE id = $4',
+      [status, errorMessage, 'sent', messageId]
     );
   } finally {
     client.release();
   }
 }
 
-async function getCampaignStats(campaignName) {
+async function getBulkCampaignStats(campaignName) {
   const client = await pool.connect();
   try {
     const result = await client.query(
-      `SELECT 
-         COUNT(*) as total,
-         COUNT(CASE WHEN status = 'sent' THEN 1 END) as sent,
-         COUNT(CASE WHEN status = 'pending' THEN 1 END) as pending,
-         COUNT(CASE WHEN status = 'failed' THEN 1 END) as failed
-       FROM bulk_messages WHERE campaign_name = $1`,
-      [campaignName]
+      'SELECT COUNT(*) as total, COUNT(CASE WHEN status = $1 THEN 1 END) as sent, COUNT(CASE WHEN status = $2 THEN 1 END) as pending, COUNT(CASE WHEN status = $3 THEN 1 END) as failed FROM bulk_messages WHERE campaign_name = $4',
+      ['sent', 'pending', 'failed', campaignName]
     );
     return result.rows[0];
   } finally {
@@ -388,10 +376,8 @@ async function getCampaignStats(campaignName) {
 
 async function processBulkMessages() {
   try {
-    const pendingMessages = await getPendingMessages(5);
+    const pendingMessages = await getPendingBulkMessages(5);
     if (pendingMessages.length === 0) return;
-
-    console.log(`📤 Processing ${pendingMessages.length} bulk message(s)...`);
 
     for (const message of pendingMessages) {
       try {
@@ -404,34 +390,18 @@ async function processBulkMessages() {
           to: message.recipient_phone
         });
 
-        // Save to conversation history
         const conversation = await getOrCreateConversation(message.recipient_phone);
-
         if (message.recipient_name && !conversation.customer_name) {
-          await updateConversation(conversation.id, {
-            customer_name: message.recipient_name
-          });
+          await updateConversation(conversation.id, { customer_name: message.recipient_name });
         }
-
         await saveMessage(conversation.id, message.recipient_phone, 'assistant', personalizedMessage);
+        await updateBulkMessageStatus(message.id, 'sent');
 
-        await updateMessageStatus(message.id, 'sent');
-        console.log(`✅ Sent to ${message.recipient_name} (${message.recipient_phone})`);
-
-        await logAnalytics('bulk_sms_sent', message.recipient_phone, {
-          campaignName: message.campaign_name,
-          recipientName: message.recipient_name
-        });
+        console.log(`✅ Bulk SMS sent to ${message.recipient_name}`);
 
       } catch (error) {
-        console.error(`❌ Failed to send to ${message.recipient_name}:`, error.message);
-        await updateMessageStatus(message.id, 'failed', error.message);
-
-        await logAnalytics('bulk_sms_failed', message.recipient_phone, {
-          campaignName: message.campaign_name,
-          recipientName: message.recipient_name,
-          error: error.message
-        });
+        console.error(`❌ Bulk SMS failed for ${message.recipient_name}:`, error.message);
+        await updateBulkMessageStatus(message.id, 'failed', error.message);
       }
     }
   } catch (error) {
@@ -440,26 +410,13 @@ async function processBulkMessages() {
 }
 
 let bulkSmsProcessor = null;
-
-function startBulkSmsProcessor() {
-  if (bulkSmsProcessor) {
-    console.log('⚠️ Bulk SMS processor already running');
-    return;
-  }
-  console.log('🚀 Starting Bulk SMS processor (checks every 5 seconds)...');
+function startBulkProcessor() {
+  if (bulkSmsProcessor) return;
+  console.log('🚀 Bulk SMS processor started');
   processBulkMessages();
   bulkSmsProcessor = setInterval(processBulkMessages, 5000);
 }
-
-function stopBulkSmsProcessor() {
-  if (bulkSmsProcessor) {
-    clearInterval(bulkSmsProcessor);
-    bulkSmsProcessor = null;
-    console.log('⏸️ Bulk SMS processor stopped');
-  }
-}
-
-startBulkSmsProcessor();
+startBulkProcessor();
 
 // ===== ROUTES =====
 
@@ -854,78 +811,58 @@ app.get('/dashboard', async (req, res) => {
 
   
 
-      <!-- BULK SMS SECTION -->
+      <!-- BULK SMS -->
       <div style="max-width: 1200px; margin: 20px auto; background: white; padding: 30px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.1);">
-        <h2 style="margin: 0 0 10px 0; color: #2d3748;">📱 Bulk SMS Campaign</h2>
-        <p style="color: #718096; margin-bottom: 25px;">Upload CSV • Send personalized messages • Track in conversations (15s intervals)</p>
+        <h2 style="margin: 0 0 10px 0; color: #2d3748;">📱 Bulk SMS</h2>
+        <p style="color: #718096; margin-bottom: 20px;">Send personalized messages (15s intervals)</p>
 
-        <div style="display: grid; gap: 20px;">
+        <div style="padding: 20px; background: #f7fafc; border-radius: 10px; margin-bottom: 15px;">
+          <h3 style="margin: 0 0 10px 0;">Upload CSV</h3>
+          <p style="font-size: 0.9rem; color: #666; margin-bottom: 10px;">Format: Name,Phone (e.g., John Doe,5551234567)</p>
+          <input type="file" id="csvFile" accept=".csv,.txt" style="padding: 10px; border: 2px solid #cbd5e0; border-radius: 8px; width: 100%; margin-bottom: 10px;">
+          <button onclick="parseCsv()" style="background: #3182ce; color: white; border: none; padding: 12px 24px; border-radius: 8px; cursor: pointer;">Parse CSV</button>
+        </div>
 
-          <!-- Upload CSV -->
-          <div style="padding: 20px; background: #f7fafc; border-radius: 10px; border: 2px dashed #cbd5e0;">
-            <h3 style="margin: 0 0 15px 0; color: #2d3748; font-size: 1.1rem;">Step 1: Upload CSV File</h3>
-            <p style="font-size: 0.9rem; color: #718096; margin-bottom: 15px;">
-              Format: <code style="background: #e2e8f0; padding: 2px 6px; border-radius: 4px;">Name,Phone</code> (e.g., John Doe,5551234567)
-            </p>
-            <input type="file" id="csvFile" accept=".csv,.txt" style="padding: 10px; border: 2px solid #cbd5e0; border-radius: 8px; width: 100%; font-size: 1rem; cursor: pointer;">
-            <button onclick="parseCsvFile()" style="margin-top: 10px; background: #3182ce; color: white; border: none; padding: 12px 24px; border-radius: 8px; font-size: 1rem; font-weight: 600; cursor: pointer;">Parse CSV</button>
+        <div id="contactPreview" style="display: none; padding: 20px; background: #f0fff4; border-radius: 10px; margin-bottom: 15px;">
+          <h3 style="margin: 0 0 10px 0;">✅ <span id="contactCount">0</span> Contacts</h3>
+          <div id="contactList" style="max-height: 150px; overflow-y: auto; font-size: 0.9rem;"></div>
+          <div id="csvErrors"></div>
+        </div>
+
+        <div id="campaignForm" style="display: none; padding: 20px; background: #fffaf0; border-radius: 10px; margin-bottom: 15px;">
+          <h3 style="margin: 0 0 15px 0;">Campaign Details</h3>
+          <div style="margin-bottom: 15px;">
+            <label style="display: block; font-weight: 600; margin-bottom: 5px;">Campaign Name</label>
+            <input type="text" id="campaignName" placeholder="Spring Sale 2026" style="width: 100%; padding: 12px; border: 2px solid #cbd5e0; border-radius: 8px;">
           </div>
-
-          <!-- Contact Preview -->
-          <div id="contactPreview" style="display: none; padding: 20px; background: #f0fff4; border-radius: 10px; border-left: 4px solid #48bb78;">
-            <h3 style="margin: 0 0 15px 0; color: #2d3748; font-size: 1.1rem;">✅ <span id="contactCount">0</span> Contacts Loaded</h3>
-            <div id="contactList" style="max-height: 200px; overflow-y: auto; font-size: 0.9rem; color: #4a5568;"></div>
-            <div id="csvErrors"></div>
+          <div style="margin-bottom: 15px;">
+            <label style="display: block; font-weight: 600; margin-bottom: 5px;">Message (use {name})</label>
+            <textarea id="messageTemplate" rows="4" placeholder="Hi {name}! Great deals this month!" style="width: 100%; padding: 12px; border: 2px solid #cbd5e0; border-radius: 8px; resize: vertical;"></textarea>
+            <div style="font-size: 0.85rem; color: #666; margin-top: 5px;"><span id="charCount">0</span> characters</div>
           </div>
+          <button onclick="launchCampaign()" style="background: #48bb78; color: white; border: none; padding: 15px 30px; border-radius: 8px; font-size: 1.1rem; cursor: pointer; width: 100%;">🚀 Launch</button>
+        </div>
 
-          <!-- Campaign Details -->
-          <div id="campaignDetails" style="display: none; padding: 20px; background: #fffaf0; border-radius: 10px; border-left: 4px solid #ed8936;">
-            <h3 style="margin: 0 0 15px 0; color: #2d3748; font-size: 1.1rem;">Step 2: Campaign Details</h3>
-
-            <div style="margin-bottom: 15px;">
-              <label style="display: block; font-weight: 600; margin-bottom: 8px; color: #2d3748;">Campaign Name</label>
-              <input type="text" id="campaignName" placeholder="e.g., Spring Sale 2026" style="width: 100%; padding: 12px; border: 2px solid #cbd5e0; border-radius: 8px; font-size: 1rem;">
+        <div id="progressTracker" style="display: none; padding: 20px; background: #ebf8ff; border-radius: 10px;">
+          <h3 style="margin: 0 0 15px 0;">Progress</h3>
+          <div style="display: flex; gap: 15px; margin-bottom: 15px;">
+            <div style="flex: 1; text-align: center; padding: 15px; background: white; border-radius: 8px;">
+              <div style="font-size: 2rem; font-weight: bold; color: #48bb78;"><span id="sentCount">0</span></div>
+              <div style="font-size: 0.85rem; color: #666;">Sent</div>
             </div>
-
-            <div style="margin-bottom: 15px;">
-              <label style="display: block; font-weight: 600; margin-bottom: 8px; color: #2d3748;">Message Template</label>
-              <p style="font-size: 0.85rem; color: #718096; margin-bottom: 8px;">
-                Use <code style="background: #e2e8f0; padding: 2px 6px; border-radius: 4px;">{name}</code> to personalize
-              </p>
-              <textarea id="messageTemplate" rows="4" placeholder="Hi {name}! We have great deals on trucks this month. Visit us today!" style="width: 100%; padding: 12px; border: 2px solid #cbd5e0; border-radius: 8px; font-size: 1rem; font-family: inherit; resize: vertical;"></textarea>
-              <div style="font-size: 0.85rem; color: #718096; margin-top: 5px;"><span id="charCount">0</span> characters</div>
+            <div style="flex: 1; text-align: center; padding: 15px; background: white; border-radius: 8px;">
+              <div style="font-size: 2rem; font-weight: bold; color: #ed8936;"><span id="pendingCount">0</span></div>
+              <div style="font-size: 0.85rem; color: #666;">Pending</div>
             </div>
-
-            <button onclick="createCampaign()" style="background: #48bb78; color: white; border: none; padding: 15px 30px; border-radius: 8px; font-size: 1.1rem; font-weight: 600; cursor: pointer; width: 100%;">🚀 Launch Campaign</button>
+            <div style="flex: 1; text-align: center; padding: 15px; background: white; border-radius: 8px;">
+              <div style="font-size: 2rem; font-weight: bold; color: #f56565;"><span id="failedCount">0</span></div>
+              <div style="font-size: 0.85rem; color: #666;">Failed</div>
+            </div>
           </div>
-
-          <!-- Progress -->
-          <div id="progressTracker" style="display: none; padding: 20px; background: #ebf8ff; border-radius: 10px; border-left: 4px solid #4299e1;">
-            <h3 style="margin: 0 0 15px 0; color: #2d3748; font-size: 1.1rem;">📊 Campaign Progress</h3>
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; margin-bottom: 20px;">
-              <div style="text-align: center; padding: 15px; background: white; border-radius: 8px;">
-                <div style="font-size: 2rem; font-weight: bold; color: #4299e1;"><span id="totalMessages">0</span></div>
-                <div style="font-size: 0.85rem; color: #718096;">Total</div>
-              </div>
-              <div style="text-align: center; padding: 15px; background: white; border-radius: 8px;">
-                <div style="font-size: 2rem; font-weight: bold; color: #48bb78;"><span id="sentMessages">0</span></div>
-                <div style="font-size: 0.85rem; color: #718096;">Sent</div>
-              </div>
-              <div style="text-align: center; padding: 15px; background: white; border-radius: 8px;">
-                <div style="font-size: 2rem; font-weight: bold; color: #ed8936;"><span id="pendingMessages">0</span></div>
-                <div style="font-size: 0.85rem; color: #718096;">Pending</div>
-              </div>
-              <div style="text-align: center; padding: 15px; background: white; border-radius: 8px;">
-                <div style="font-size: 2rem; font-weight: bold; color: #f56565;"><span id="failedMessages">0</span></div>
-                <div style="font-size: 0.85rem; color: #718096;">Failed</div>
-              </div>
-            </div>
-            <div style="background: #e2e8f0; border-radius: 8px; height: 20px; overflow: hidden;">
-              <div id="progressBar" style="background: linear-gradient(90deg, #48bb78 0%, #38a169 100%); height: 100%; width: 0%; transition: width 0.3s;"></div>
-            </div>
-            <div style="text-align: center; margin-top: 10px; font-size: 0.9rem; color: #4a5568;"><span id="progressText">Preparing...</span></div>
+          <div style="background: #e2e8f0; border-radius: 8px; height: 20px; overflow: hidden;">
+            <div id="progressBar" style="background: #48bb78; height: 100%; width: 0%; transition: width 0.3s;"></div>
           </div>
-
+          <div style="text-align: center; margin-top: 10px; font-size: 0.9rem; color: #666;"><span id="progressText">...</span></div>
         </div>
       </div>
 
@@ -1469,13 +1406,13 @@ app.get('/dashboard', async (req, res) => {
 
     <script>
       let parsedContacts = [];
-      let currentCampaignName = '';
-      let progressInterval = null;
+      let currentCampaign = '';
+      let progressTimer = null;
 
-      async function parseCsvFile() {
+      async function parseCsv() {
         const fileInput = document.getElementById('csvFile');
         const file = fileInput.files[0];
-        if (!file) { alert('Please select a CSV file'); return; }
+        if (!file) { alert('Select a CSV file'); return; }
 
         const reader = new FileReader();
         reader.onload = async function(e) {
@@ -1484,115 +1421,108 @@ app.get('/dashboard', async (req, res) => {
             const response = await fetch('/api/bulk-sms/parse-csv', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ csvData })
+              body: JSON.stringify({ csvData: csvData })
             });
             const result = await response.json();
             if (result.success) {
               parsedContacts = result.contacts;
-              displayContacts(result.contacts, result.errors);
-              document.getElementById('campaignDetails').style.display = 'block';
+              showContacts(result.contacts, result.errors);
+              document.getElementById('campaignForm').style.display = 'block';
             } else {
               alert('Error: ' + result.error);
             }
           } catch (error) {
-            alert('Error: ' + error.message);
+            alert('Parse error: ' + error.message);
           }
         };
         reader.readAsText(file);
       }
 
-      function displayContacts(contacts, errors) {
+      function showContacts(contacts, errors) {
         document.getElementById('contactCount').textContent = contacts.length;
         const list = document.getElementById('contactList');
-        list.innerHTML = contacts.slice(0, 10).map(function(c) {
-          return '<div style="padding: 5px 0;">✓ ' + c.name + ' - ' + c.phone + '</div>';
-        }).join('');
-        if (contacts.length > 10) {
-          list.innerHTML += '<div style="padding: 5px 0; font-style: italic; color: #718096;">...and ' + (contacts.length - 10) + ' more</div>';
+        let html = '';
+        for (let i = 0; i < Math.min(contacts.length, 10); i++) {
+          html += '<div style="padding: 3px 0;">✓ ' + contacts[i].name + ' - ' + contacts[i].phone + '</div>';
         }
+        if (contacts.length > 10) {
+          html += '<div style="padding: 3px 0; font-style: italic; color: #999;">...and ' + (contacts.length - 10) + ' more</div>';
+        }
+        list.innerHTML = html;
+
         if (errors.length > 0) {
-          document.getElementById('csvErrors').innerHTML = 
-            '<div style="background: #fff5f5; padding: 10px; border-radius: 6px; border-left: 3px solid #f56565; margin-top: 10px;">' +
-              '<strong style="color: #c53030;">⚠️ ' + errors.length + ' Error(s):</strong>' +
-              errors.slice(0, 5).map(function(e) {
-                return '<div style="font-size: 0.85rem; color: #742a2a;">Row ' + e.row + ': ' + e.error + '</div>';
-              }).join('') +
-            '</div>';
+          let errorHtml = '<div style="background: #fff5f5; padding: 10px; border-radius: 6px; margin-top: 10px;">';
+          errorHtml += '<strong style="color: #c53030;">⚠️ ' + errors.length + ' Errors:</strong>';
+          for (let i = 0; i < Math.min(errors.length, 5); i++) {
+            errorHtml += '<div style="font-size: 0.85rem; color: #742a2a;">Row ' + errors[i].row + ': ' + errors[i].error + '</div>';
+          }
+          errorHtml += '</div>';
+          document.getElementById('csvErrors').innerHTML = errorHtml;
         }
         document.getElementById('contactPreview').style.display = 'block';
       }
 
-      const msgBox = document.getElementById('messageTemplate');
-      if (msgBox) {
-        msgBox.addEventListener('input', function() {
+      const msgTemplate = document.getElementById('messageTemplate');
+      if (msgTemplate) {
+        msgTemplate.addEventListener('input', function() {
           document.getElementById('charCount').textContent = this.value.length;
         });
       }
 
-      async function createCampaign() {
+      async function launchCampaign() {
         const campaignName = document.getElementById('campaignName').value.trim();
         const messageTemplate = document.getElementById('messageTemplate').value.trim();
-
-        if (!campaignName) { alert('Please enter a campaign name'); return; }
-        if (!messageTemplate) { alert('Please enter a message template'); return; }
+        if (!campaignName) { alert('Enter campaign name'); return; }
+        if (!messageTemplate) { alert('Enter message'); return; }
         if (!messageTemplate.includes('{name}')) { alert('Message must include {name}'); return; }
-        if (parsedContacts.length === 0) { alert('No contacts loaded'); return; }
+        if (parsedContacts.length === 0) { alert('No contacts'); return; }
 
         try {
           const response = await fetch('/api/bulk-sms/create-campaign', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ campaignName, messageTemplate, contacts: parsedContacts })
+            body: JSON.stringify({ campaignName: campaignName, messageTemplate: messageTemplate, contacts: parsedContacts })
           });
           const result = await response.json();
           if (result.success) {
-            currentCampaignName = campaignName;
+            currentCampaign = campaignName;
+            document.getElementById('campaignForm').style.display = 'none';
             document.getElementById('progressTracker').style.display = 'block';
-            document.getElementById('campaignDetails').style.display = 'none';
-            alert('✅ Campaign launched! ' + result.messageCount + ' messages over ' + Math.ceil(result.estimatedCompletionTime / 60) + ' minutes\n\n💬 Check "50 Most Recent Texts" to see sent messages!');
-            startProgressTracking(campaignName);
+            alert('✅ Launched! ' + result.messageCount + ' messages over ' + result.estimatedTime + ' min');
+            trackProgress(campaignName);
           } else {
             alert('Error: ' + result.error);
           }
         } catch (error) {
-          alert('Error: ' + error.message);
+          alert('Launch error: ' + error.message);
         }
       }
 
-      function startProgressTracking(campaignName) {
+      function trackProgress(campaignName) {
         updateProgress(campaignName);
-        if (progressInterval) clearInterval(progressInterval);
-        progressInterval = setInterval(function() {
-          updateProgress(campaignName);
-        }, 3000);
+        if (progressTimer) clearInterval(progressTimer);
+        progressTimer = setInterval(function() { updateProgress(campaignName); }, 3000);
       }
 
       async function updateProgress(campaignName) {
         try {
           const response = await fetch('/api/bulk-sms/campaign/' + encodeURIComponent(campaignName));
           const stats = await response.json();
-
-          document.getElementById('totalMessages').textContent = stats.total;
-          document.getElementById('sentMessages').textContent = stats.sent;
-          document.getElementById('pendingMessages').textContent = stats.pending;
-          document.getElementById('failedMessages').textContent = stats.failed;
-
-          const percentComplete = (stats.sent / stats.total) * 100;
-          document.getElementById('progressBar').style.width = percentComplete + '%';
-
-          if (stats.pending === 0) {
-            document.getElementById('progressText').textContent = 
-              '✅ Campaign complete! ' + stats.sent + ' sent, ' + stats.failed + ' failed';
-            if (progressInterval) {
-              clearInterval(progressInterval);
-              progressInterval = null;
-            }
+          document.getElementById('sentCount').textContent = stats.sent;
+          document.getElementById('pendingCount').textContent = stats.pending;
+          document.getElementById('failedCount').textContent = stats.failed;
+          const total = parseInt(stats.total);
+          const sent = parseInt(stats.sent);
+          const percent = total > 0 ? Math.round((sent / total) * 100) : 0;
+          document.getElementById('progressBar').style.width = percent + '%';
+          if (stats.pending === '0' || stats.pending === 0) {
+            document.getElementById('progressText').textContent = '✅ Complete! ' + stats.sent + ' sent, ' + stats.failed + ' failed';
+            if (progressTimer) { clearInterval(progressTimer); progressTimer = null; }
           } else {
-            document.getElementById('progressText').textContent = 
-              'Sending messages... (' + stats.sent + '/' + stats.total + ')';
+            document.getElementById('progressText').textContent = 'Sending... (' + stats.sent + '/' + stats.total + ')';
           }
         } catch (error) {
-          console.error('Progress update error:', error);
+          console.error('Progress error:', error);
         }
       }
     </script>
@@ -2347,29 +2277,33 @@ app.get('/api/export/engaged', async (req, res) => {
 app.post('/api/bulk-sms/parse-csv', async (req, res) => {
   try {
     const { csvData } = req.body;
-    if (!csvData) return res.status(400).json({ error: 'No CSV data provided' });
+    if (!csvData) return res.status(400).json({ error: 'No CSV data' });
 
-    const lines = csvData.trim().split('\n');
+    const lines = csvData.split(/\r?\n/);
     const contacts = [];
     const errors = [];
-    const startRow = lines[0].toLowerCase().includes('name') ? 1 : 0;
+    let startRow = 0;
+    if (lines[0] && lines[0].toLowerCase().includes('name')) startRow = 1;
 
     for (let i = startRow; i < lines.length; i++) {
       const line = lines[i].trim();
       if (!line) continue;
 
-      const parts = line.split(',').map(p => p.trim());
+      const parts = line.split(',');
       if (parts.length < 2) {
         errors.push({ row: i + 1, error: 'Missing name or phone' });
         continue;
       }
 
-      const name = parts[0].replace(/['"]/g, '');
-      let phone = parts[1].replace(/['"]/g, '').replace(/\D/g, '');
+      const name = parts[0].trim().replace(/^["']|["']$/g, '');
+      const rawPhone = parts[1].trim().replace(/^["']|["']$/g, '');
+      const digitsOnly = rawPhone.replace(/[^0-9]/g, '');
 
-      if (phone.length === 10) phone = '1' + phone;
+      let phone = digitsOnly;
+      if (digitsOnly.length === 10) phone = '1' + digitsOnly;
+
       if (phone.length !== 11 || !phone.startsWith('1')) {
-        errors.push({ row: i + 1, name, phone: parts[1], error: 'Invalid phone format' });
+        errors.push({ row: i + 1, name, phone: rawPhone, error: 'Invalid phone' });
         continue;
       }
 
@@ -2378,7 +2312,6 @@ app.post('/api/bulk-sms/parse-csv', async (req, res) => {
 
     res.json({ success: true, contacts, errors, total: contacts.length, errorCount: errors.length });
   } catch (error) {
-    console.error('❌ CSV parse error:', error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -2386,56 +2319,26 @@ app.post('/api/bulk-sms/parse-csv', async (req, res) => {
 app.post('/api/bulk-sms/create-campaign', async (req, res) => {
   try {
     const { campaignName, messageTemplate, contacts } = req.body;
-
     if (!campaignName || !messageTemplate || !contacts || contacts.length === 0) {
-      return res.status(400).json({ error: 'Missing required fields' });
+      return res.status(400).json({ error: 'Missing fields' });
     }
-
     if (!messageTemplate.includes('{name}')) {
-      return res.status(400).json({ error: 'Message template must include {name} placeholder' });
+      return res.status(400).json({ error: 'Message must include {name}' });
     }
 
     const messageIds = await saveBulkCampaign(campaignName, messageTemplate, contacts);
-
-    res.json({
-      success: true,
-      campaignName,
-      messageCount: messageIds.length,
-      messageIds,
-      estimatedCompletionTime: contacts.length * 15,
-      message: `Campaign created! Messages will be sent over ${Math.ceil(contacts.length * 15 / 60)} minutes`
-    });
+    res.json({ success: true, campaignName, messageCount: messageIds.length, estimatedTime: Math.ceil(contacts.length * 15 / 60) });
   } catch (error) {
-    console.error('❌ Campaign creation error:', error);
     res.status(500).json({ error: error.message });
   }
 });
 
 app.get('/api/bulk-sms/campaign/:campaignName', async (req, res) => {
   try {
-    const stats = await getCampaignStats(req.params.campaignName);
+    const stats = await getBulkCampaignStats(req.params.campaignName);
     res.json(stats);
   } catch (error) {
     res.status(500).json({ error: error.message });
-  }
-});
-
-app.get('/api/bulk-sms/campaigns', async (req, res) => {
-  const client = await pool.connect();
-  try {
-    const result = await client.query(`
-      SELECT campaign_name, COUNT(*) as total,
-        COUNT(CASE WHEN status = 'sent' THEN 1 END) as sent,
-        COUNT(CASE WHEN status = 'pending' THEN 1 END) as pending,
-        COUNT(CASE WHEN status = 'failed' THEN 1 END) as failed,
-        MIN(created_at) as created_at, MAX(sent_at) as last_sent
-      FROM bulk_messages GROUP BY campaign_name ORDER BY created_at DESC
-    `);
-    res.json(result.rows);
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  } finally {
-    client.release();
   }
 });
 
