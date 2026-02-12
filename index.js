@@ -1681,12 +1681,12 @@ app.get('/api/dashboard', async (req, res) => {
   }
 });
 
-// API: Get all conversations
+// API: Get all conversations - FIXED: No duplicates
 app.get('/api/conversations', async (req, res) => {
   const client = await pool.connect();
   try {
     const result = await client.query(`
-      SELECT 
+      SELECT DISTINCT ON (c.customer_phone)
         c.id,
         c.customer_phone,
         cu.name as customer_name,
@@ -1699,9 +1699,18 @@ app.get('/api/conversations', async (req, res) => {
         (SELECT COUNT(*) FROM messages WHERE conversation_id = c.id) as message_count
       FROM conversations c
       LEFT JOIN customers cu ON c.customer_phone = cu.phone
-      ORDER BY c.updated_at DESC
+      ORDER BY c.customer_phone, c.updated_at DESC
       LIMIT 50
     `);
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Error fetching conversations:', error);
+    res.status(500).json({ error: 'Failed to fetch conversations' });
+  } finally {
+    client.release();
+  }
+});
+
     res.json(result.rows);
   } catch (error) {
     res.json({ error: error.message });
