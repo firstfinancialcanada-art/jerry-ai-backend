@@ -936,7 +936,36 @@ app.get('/dashboard', async (req, res) => {
 
   
 
-      <!-- BULK SMS -->
+    
+
+  <!-- 🚨 BULK SMS SAFETY CONTROLS -->
+  <div style="max-width: 1200px; margin: 20px auto; background: #fff3cd; border: 3px solid #ffc107; padding: 25px; border-radius: 15px; box-shadow: 0 6px 15px rgba(0,0,0,0.15);">
+    <h2 style="margin: 0 0 15px 0; color: #856404;">🚨 Bulk SMS Safety Controls</h2>
+    <p style="color: #856404; margin-bottom: 20px; font-size: 0.95rem;">Use these controls to monitor and stop bulk campaigns</p>
+
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+
+      <button onclick="emergencyStopBulk()" style="background: linear-gradient(135deg, #dc3545 0%, #c82333 100%); color: white; border: none; padding: 20px; border-radius: 10px; font-size: 1.1rem; font-weight: bold; cursor: pointer; box-shadow: 0 4px 6px rgba(220,53,69,0.3); transition: all 0.3s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+        🚨 EMERGENCY STOP<br><span style="font-size: 0.8rem; opacity: 0.9;">Stop all bulk sending NOW</span>
+      </button>
+
+      <button onclick="checkBulkStatus()" style="background: linear-gradient(135deg, #17a2b8 0%, #138496 100%); color: white; border: none; padding: 20px; border-radius: 10px; font-size: 1.1rem; font-weight: bold; cursor: pointer; box-shadow: 0 4px 6px rgba(23,162,184,0.3); transition: all 0.3s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+        📊 Check Status<br><span style="font-size: 0.8rem; opacity: 0.9;">View bulk SMS queue</span>
+      </button>
+
+      <button onclick="wipeBulkMessages()" style="background: linear-gradient(135deg, #fd7e14 0%, #e8590c 100%); color: white; border: none; padding: 20px; border-radius: 10px; font-size: 1.1rem; font-weight: bold; cursor: pointer; box-shadow: 0 4px 6px rgba(253,126,20,0.3); transition: all 0.3s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+        🗑️ Wipe All<br><span style="font-size: 0.8rem; opacity: 0.9;">Clear entire queue</span>
+      </button>
+
+    </div>
+
+    <div id="bulkStatusDisplay" style="margin-top: 20px; padding: 15px; background: #fff; border-radius: 8px; display: none; border: 2px solid #ffc107;">
+      <h3 style="margin: 0 0 10px 0; color: #856404;">Current Status:</h3>
+      <div id="bulkStatusContent" style="font-family: monospace; font-size: 0.9rem; line-height: 1.8;"></div>
+    </div>
+  </div>
+
+  <!-- BULK SMS -->
       <div style="max-width: 1200px; margin: 20px auto; background: white; padding: 30px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.1);">
         <h2 style="margin: 0 0 10px 0; color: #2d3748;">📱 Bulk SMS</h2>
         <p style="color: #718096; margin-bottom: 20px;">Send personalized messages (15s intervals)</p>
@@ -1623,7 +1652,106 @@ app.get('/dashboard', async (req, res) => {
         }
       }
 
-      function trackProgress(campaignName) {
+  
+
+    // 🚨 EMERGENCY STOP BULK SMS FUNCTION
+    async function emergencyStopBulk() {
+      if (!confirm('🚨 EMERGENCY STOP - BULK SMS\n\nThis will:\n✓ Stop the bulk processor immediately\n✓ Cancel all pending messages\n✓ Prevent any further sending\n\nAre you absolutely sure?')) {
+        return;
+      }
+
+      try {
+        const response = await fetch('/api/emergency-stop-bulk');
+        const data = await response.json();
+
+        if (data.success) {
+          alert(`🚨 EMERGENCY STOP ACTIVATED\n\n✓ Processor stopped\n✓ ${data.cancelled} messages cancelled\n\nNo more bulk SMS will be sent until you restart manually.`);
+          checkBulkStatus();
+        } else {
+          alert('❌ Error: ' + (data.error || 'Unknown error'));
+        }
+      } catch (error) {
+        console.error('Emergency stop error:', error);
+        alert('❌ Emergency stop error: ' + error.message);
+      }
+    }
+
+    // CHECK BULK STATUS AND DISPLAY
+    async function checkBulkStatus() {
+      try {
+        const response = await fetch('/api/bulk-status');
+        const data = await response.json();
+
+        const display = document.getElementById('bulkStatusDisplay');
+        const content = document.getElementById('bulkStatusContent');
+
+        let html = `<div style="font-size: 1.1rem; margin-bottom: 15px;"><strong>Processor Status:</strong> ${data.processorRunning ? '<span style="color: #10b981; font-weight: bold;">🟢 RUNNING</span>' : '<span style="color: #dc3545; font-weight: bold;">🔴 STOPPED</span>'}</div>`;
+
+        html += '<div style="border-top: 2px solid #ffc107; padding-top: 15px; margin-top: 10px;"><strong>Message Queue Status:</strong><br><br>';
+
+        if (!data.stats || data.stats.length === 0) {
+          html += '<span style="color: #10b981;">✓ No messages in queue (empty)</span>';
+        } else {
+          data.stats.forEach(stat => {
+            let emoji = '⏳';
+            let color = '#ffc107';
+            if (stat.status === 'sent') { emoji = '✅'; color = '#10b981'; }
+            else if (stat.status === 'failed') { emoji = '❌'; color = '#dc3545'; }
+            else if (stat.status === 'cancelled') { emoji = '🚫'; color = '#6c757d'; }
+            else if (stat.status === 'blocked') { emoji = '🛑'; color = '#dc3545'; }
+
+            html += `<div style="padding: 8px 0; border-bottom: 1px solid #eee;">
+              <span style="font-size: 1.2rem;">${emoji}</span> 
+              <strong style="color: ${color}; text-transform: uppercase;">${stat.status}</strong>: 
+              <span style="font-weight: bold;">${stat.count}</span> messages 
+              <span style="color: #666;">(${stat.campaigns} campaign${stat.campaigns > 1 ? 's' : ''})</span>
+            </div>`;
+          });
+        }
+
+        html += '</div>';
+
+        content.innerHTML = html;
+        display.style.display = 'block';
+
+        // Auto-refresh if processor is running and there are pending messages
+        if (data.processorRunning && data.stats.some(s => s.status === 'pending')) {
+          setTimeout(checkBulkStatus, 5000); // Refresh every 5 seconds
+        }
+      } catch (error) {
+        console.error('Status check error:', error);
+        alert('❌ Status check error: ' + error.message);
+      }
+    }
+
+    // WIPE ALL BULK MESSAGES
+    async function wipeBulkMessages() {
+      if (!confirm('⚠️ WIPE ALL BULK MESSAGES\n\nThis will DELETE ALL bulk messages from the database.\n\nIncluding:\n• Pending messages\n• Sent history\n• Failed messages\n\nThis action CANNOT be undone.\n\nAre you absolutely sure?')) {
+        return;
+      }
+
+      // Double confirmation for safety
+      if (!confirm('🚨 FINAL WARNING\n\nYou are about to permanently delete ALL bulk SMS data.\n\nType YES in your mind and click OK to proceed.')) {
+        return;
+      }
+
+      try {
+        const response = await fetch('/api/wipe-bulk');
+        const data = await response.json();
+
+        if (data.success) {
+          alert(`✓ Bulk Messages Wiped\n\n${data.wiped} messages deleted from database.\n\nQueue is now empty.`);
+          checkBulkStatus();
+        } else {
+          alert('❌ Error: ' + (data.error || 'Unknown error'));
+        }
+      } catch (error) {
+        console.error('Wipe error:', error);
+        alert('❌ Wipe error: ' + error.message);
+      }
+    }
+
+    function trackProgress(campaignName) {
         updateProgress(campaignName);
         if (progressTimer) clearInterval(progressTimer);
         progressTimer = setInterval(function() { updateProgress(campaignName); }, 3000);
@@ -2492,6 +2620,89 @@ app.get('/api/bulk-sms/campaign/:campaignName', async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 });
+
+
+// 🚨 EMERGENCY STOP ALL BULK SMS
+app.get('/api/emergency-stop-bulk', async (req, res) => {
+  try {
+    const client = await pool.connect();
+    try {
+      // STOP THE PROCESSOR
+      if (bulkSmsProcessor) {
+        clearInterval(bulkSmsProcessor);
+        bulkSmsProcessor = null;
+        console.log('🚨 BULK PROCESSOR STOPPED');
+      }
+
+      // Mark all pending messages as cancelled
+      const result = await client.query(
+        `UPDATE bulkmessages SET status = 'cancelled', errormessage = 'Emergency stop by user' WHERE status = 'pending'`
+      );
+
+      res.json({
+        success: true,
+        message: '🚨 EMERGENCY STOP ACTIVATED',
+        cancelled: result.rowCount,
+        processorStopped: true
+      });
+    } finally {
+      client.release();
+    }
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// PURGE SPECIFIC CAMPAIGN
+app.delete('/api/bulk-campaign/:campaignName', async (req, res) => {
+  try {
+    const campaignName = decodeURIComponent(req.params.campaignName);
+    const client = await pool.connect();
+    try {
+      const result = await client.query(
+        `DELETE FROM bulkmessages WHERE campaignname = $1 AND status = 'pending'`,
+        [campaignName]
+      );
+
+      res.json({
+        success: true,
+        message: `Purged ${result.rowCount} pending messages from campaign: ${campaignName}`,
+        deleted: result.rowCount
+      });
+    } finally {
+      client.release();
+    }
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// GET BULK STATUS (for monitoring)
+app.get('/api/bulk-status', async (req, res) => {
+  try {
+    const client = await pool.connect();
+    try {
+      const result = await client.query(`
+        SELECT 
+          status,
+          COUNT(*) as count,
+          COUNT(DISTINCT campaignname) as campaigns
+        FROM bulkmessages
+        GROUP BY status
+      `);
+
+      res.json({
+        processorRunning: bulkSmsProcessor !== null,
+        stats: result.rows
+      });
+    } finally {
+      client.release();
+    }
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 
 app.listen(PORT, HOST, () => {
   console.log(`✅ Jerry AI Backend - Database Edition - Port ${PORT}`);
