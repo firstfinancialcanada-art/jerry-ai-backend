@@ -564,6 +564,31 @@ app.get('/', (req, res) => {
   });
 });
 
+// EMERGENCY STOP - ALL BULK MESSAGES
+app.get('/api/stop-bulk', async (req, res) => {
+  const client = await pool.connect();
+  try {
+    const result = await client.query(
+      `UPDATE bulkmessages SET status = 'cancelled', errormessage = 'Emergency stop by user' 
+       WHERE status = 'pending'`
+    );
+
+    const cancelled = result.rowCount;
+    console.log(`🚨 EMERGENCY STOP: ${cancelled} messages cancelled`);
+
+    res.json({
+      success: true,
+      cancelled: cancelled,
+      message: `Emergency stop: ${cancelled} pending messages cancelled`
+    });
+  } catch (error) {
+    console.error('Emergency stop error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  } finally {
+    client.release();
+  }
+});
+
 // Interactive HTML Dashboard
 app.get('/dashboard', async (req, res) => {
   res.send(`
@@ -1759,33 +1784,7 @@ app.get('/dashboard', async (req, res) => {
       }
     }
 
-    
-// EMERGENCY STOP - ALL BULK MESSAGES
-app.get('/api/stop-bulk', async (req, res) => {
-  const client = await pool.connect();
-  try {
-    const result = await client.query(
-      `UPDATE bulkmessages SET status = 'cancelled', errormessage = 'Emergency stop by user' 
-       WHERE status = 'pending'`
-    );
-
-    const cancelled = result.rowCount;
-    console.log(`🚨 EMERGENCY STOP: ${cancelled} messages cancelled`);
-
-    res.json({
-      success: true,
-      cancelled: cancelled,
-      message: `Emergency stop: ${cancelled} pending messages cancelled`
-    });
-  } catch (error) {
-    console.error('Emergency stop error:', error);
-    res.status(500).json({ success: false, error: error.message });
-  } finally {
-    client.release();
-  }
-});
-
-// WIPE ALL BULK MESSAGES
+    // WIPE ALL BULK MESSAGES
     async function wipeBulkMessages() {
       if (!confirm('⚠️ WIPE ALL BULK MESSAGES\n\nThis will DELETE ALL messages from the queue.\n\nAre you sure?')) {
         return;
