@@ -255,8 +255,34 @@ async function deleteConversation(phone) {
   }
 }
 
-// Save message to database
+// 🆕 FIX #9: Check for duplicate messages (prevents duplicate messages after conversion)
+async function messageExists(conversationId, role, content) {
+  const client = await pool.connect();
+  try {
+    const result = await client.query(
+      `SELECT id FROM messages 
+       WHERE conversation_id = $1 
+       AND role = $2 
+       AND content = $3 
+       AND created_at > NOW() - INTERVAL '30 seconds'
+       LIMIT 1`,
+      [conversationId, role, content]
+    );
+    return result.rows.length > 0;
+  } finally {
+    client.release();
+  }
+}
+
+// Save message to database (with duplicate prevention)
 async function saveMessage(conversationId, phone, role, content) {
+  // 🆕 FIX #9: Check for duplicate before saving
+  const isDuplicate = await messageExists(conversationId, role, content);
+  if (isDuplicate) {
+    console.log('⚠️ Duplicate message prevented:', content.substring(0, 50) + '...');
+    return;
+  }
+
   const client = await pool.connect();
   try {
     await client.query(
